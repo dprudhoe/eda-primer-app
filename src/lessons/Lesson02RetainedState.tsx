@@ -44,6 +44,7 @@ export default function Lesson02RetainedState() {
   const [lateEmpty, setLateEmpty] = useState(false);
   const lateConnectedRef = useRef(lateConnected);
   const retainedRef = useRef(retained);
+  const lastPublishedRef = useRef<State | null>(null);
   const observedRef = useRef(observed);
   const rbeRef = useRef(rbe);
   lateConnectedRef.current = lateConnected;
@@ -61,19 +62,22 @@ export default function Lesson02RetainedState() {
     observedRef.current = state;
     setStats((s) => ({ ...s, sampled: s.sampled + 1 }));
     emit({ from: PLC, to: EDGE, tone: "green", label: formatPressure(state), duration: 0.5 });
-    if (rbeRef.current && retainedRef.current === state) {
+    if (rbeRef.current && lastPublishedRef.current === state) {
       setLastSuppressed(true);
       setStats((s) => ({ ...s, suppressed: s.suppressed + 1 }));
       return;
     }
     setLastSuppressed(false);
-    setRetained(state);
-    retainedRef.current = state;
+    lastPublishedRef.current = state;
     setStats((s) => ({ ...s, published: s.published + 1 }));
     const tone = "green" as const;
     // PLC sample rises to Ignition; changed values continue to broker and retained slot
     later(520, () => emit({ from: EDGE, to: HUB, tone, label: formatPressure(state), duration: 0.7 }));
     later(1240, () => emit({ from: HUB, to: RETAIN, tone, label: formatPressure(state), duration: 0.6 }));
+    later(1840, () => {
+      setRetained(state);
+      retainedRef.current = state;
+    });
     // live consumer receives the transition (state applied on arrival, once)
     later(1240, () => emit({ from: HUB, to: LIVE, tone, label: formatPressure(state), duration: 1 }));
     later(2240, () => setLiveValue(state));
@@ -115,6 +119,7 @@ export default function Lesson02RetainedState() {
   const clearRetained = () => {
     setRetained(null);
     retainedRef.current = null;
+    lastPublishedRef.current = null;
     setLastSuppressed(false);
   };
 
@@ -124,6 +129,7 @@ export default function Lesson02RetainedState() {
     setRunning(false);
     setRetained(null);
     retainedRef.current = null;
+    lastPublishedRef.current = null;
     setLastSuppressed(false);
     setLiveValue(null);
     setStats({ sampled: 0, published: 0, suppressed: 0 });
