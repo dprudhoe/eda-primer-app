@@ -178,7 +178,7 @@ export default function Lesson06Reliability() {
     <div className="lesson-layout">
       <div>
         <Stage
-          note="A valid order needs the database. When the database is down it becomes a temporary failure and retries; an invalid order fails permanently. Whichever limit hits first — max retries, TTL, or a hard rejection — routes the message to the Dead Message Queue."
+          note="A valid order needs the database. When the database is down it becomes a temporary failure and retries; an invalid order fails permanently. Whichever limit hits first — max retries, Time to Live (TTL), or a hard rejection — routes the message to the Dead Message Queue."
           minHeight={420}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -286,7 +286,7 @@ export default function Lesson06Reliability() {
             <ControlGroup label="Policies">
               <Slider disabled={demoActive} label="Max retries" value={maxRetries} min={0} max={10} onChange={setMaxRetries} />
               <Slider disabled={demoActive} label="Retry delay" value={retryDelay} min={1} max={6} unit="s" onChange={setRetryDelay} />
-              <Slider disabled={demoActive} label="TTL (0 = off)" value={ttlSec} min={0} max={20} unit="s" onChange={setTtlSec} />
+              <Slider disabled={demoActive} label="Time to Live (TTL, 0 = off)" value={ttlSec} min={0} max={20} unit="s" onChange={setTtlSec} />
               <Toggle disabled={demoActive} checked={dmqEnabled} onChange={setDmqEnabled} label="Dead Message Queue" />
             </ControlGroup>
           </div>
@@ -313,7 +313,7 @@ export default function Lesson06Reliability() {
             <p><b style={{ color: "var(--green-bright)" }}>Valid + DB online</b> → commits and acknowledges.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Valid + DB offline</b> → temporary failure; retries with a delay, then succeeds once the DB is back.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Invalid</b> → permanent failure; rejected straight to the DMQ, no retries.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>TTL</b> → caps how long a message stays useful, regardless of retries left.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Time to Live (TTL)</b> → sets how long a queued message remains eligible for delivery. When it expires, the broker removes it from the work queue and routes it to the DMQ when one is configured.</p>
           </div>
         </Card>
 
@@ -321,7 +321,7 @@ export default function Lesson06Reliability() {
           items={[
             "Temporary failures may justify retry.",
             "Permanent failures should be isolated, not retried indefinitely.",
-            "TTL limits how long an event stays useful.",
+            "Time to Live (TTL) limits how long a queued message remains eligible for delivery.",
             "Retry limits stop a poison message from blocking the queue.",
             "A DMQ makes failed messages visible and recoverable.",
             "Broker-managed policies reduce custom reliability code in every app.",

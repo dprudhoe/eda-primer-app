@@ -49,7 +49,7 @@ const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer"
     consumerLabel: "Quality + reports",
   },
   regional: {
-    id: "regional", name: "Regional DC", accent: "cyan", pt: { x: 53, y: 65 },
+    id: "regional", name: "HQ Data Center", accent: "cyan", pt: { x: 53, y: 65 },
     pubs: [{ label: "Daily report", topic: "regional/report/daily" }],
     subs: ["factory/production/>"],
     consumerLabel: "Production",
@@ -260,7 +260,7 @@ export default function Lesson09EventMesh() {
         <Card title="Try this">
           <div className="prose" style={{ fontSize: 13 }}>
             <p><b style={{ color: "var(--green-bright)" }}>Quality:</b> flows from the factory publisher to its local broker, then only to Azure and its interested consumer.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Production:</b> reaches the local factory consumer and the Regional DC consumer.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Production:</b> reaches the local factory consumer and the HQ Data Center consumer.</p>
             <p><b style={{ color: "var(--green-bright)" }}>WAN outage:</b> disconnect the WAN and publish — queued messages appear on the failed path toward each interested remote broker.</p>
           </div>
         </Card>
