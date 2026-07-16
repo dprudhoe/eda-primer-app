@@ -7,6 +7,9 @@
   --green: #63d5a9;
   --green-bright: #8be4bf;
   --green-glow: #b3f0d5;
+  --brand-lime: #8cf45b;
+  --brand-teal: #08c99a;
+  --brand-gradient: linear-gradient(105deg, var(--brand-lime), var(--brand-teal));
   --cyan: #7ed8d2;
   --ink: #0f2842;
   --ink-2: #163a5f;
@@ -172,8 +175,10 @@ select {
 }
 
 .nav-item.active {
-  background: rgba(61, 186, 145, 0.14);
-  border-color: var(--line-strong);
+  background:
+    linear-gradient(90deg, rgba(140, 244, 91, 0.13), rgba(8, 201, 154, 0.08));
+  border-color: rgba(99, 213, 169, 0.5);
+  box-shadow: inset 3px 0 0 var(--brand-lime);
 }
 
 .nav-index {
@@ -191,9 +196,10 @@ select {
 }
 
 .nav-item.active .nav-index {
-  background: var(--green);
-  border-color: var(--green);
+  background: var(--brand-gradient);
+  border-color: var(--brand-teal);
   color: var(--ink);
+  box-shadow: 0 0 14px rgba(8, 201, 154, 0.2);
 }
 
 .nav-item.intro .nav-index {
@@ -954,14 +960,15 @@ button.btn:disabled {
   cursor: not-allowed;
 }
 button.btn.primary {
-  background: var(--green);
-  border-color: var(--green);
-  color: var(--ink);
+  background: var(--brand-gradient);
+  border-color: var(--brand-teal);
+  color: #093b5f;
   font-weight: 700;
+  box-shadow: 0 8px 20px rgba(8, 201, 154, 0.16);
 }
 button.btn.primary:hover:not(:disabled) {
-  background: var(--green-bright);
-  border-color: var(--green-bright);
+  background: linear-gradient(105deg, #a1f778, #20d7aa);
+  border-color: var(--brand-lime);
 }
 button.btn.danger {
   border-color: rgba(239, 90, 106, 0.5);
