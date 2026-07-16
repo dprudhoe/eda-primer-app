@@ -190,6 +190,7 @@ export default function Lesson04Queues() {
 
         <InsightCard
           items={[
+            "A durable queue is a broker-managed object that attracts matching events through subscriptions and holds them until a consumer acknowledges them.",
             "Publishers publish to topics, not directly to queues.",
             "Subscriptions define which messages a queue attracts.",
             "A queue can hold multiple subscriptions; multiple queues can attract the same event.",
