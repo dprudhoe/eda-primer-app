@@ -143,7 +143,13 @@ export default function Lesson07FanOutMixed() {
                 );
               }
               const c = cardPt(i);
-              return <line key={l.id} className={`flow-line ${dead ? "dead" : "active"}`} x1={HUB.x} y1={HUB.y} x2={c.x} y2={c.y} vectorEffect="non-scaling-stroke" />;
+              const bend = queuePt(i);
+              return (
+                <g key={l.id}>
+                  <line className={`flow-line ${dead ? "dead" : "active"}`} x1={HUB.x} y1={HUB.y} x2={bend.x} y2={bend.y} vectorEffect="non-scaling-stroke" />
+                  <line className={`flow-line ${dead ? "dead" : "active"}`} x1={bend.x} y1={bend.y} x2={c.x} y2={c.y} vectorEffect="non-scaling-stroke" />
+                </g>
+              );
             })}
           </svg>
 

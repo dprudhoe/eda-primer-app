@@ -34,7 +34,7 @@ type Site = {
 
 const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer" | "outBuffer">> = {
   factory: {
-    id: "factory", name: "Factory", accent: "green", pt: { x: 20, y: 28 },
+    id: "factory", name: "Factory", accent: "green", pt: { x: 36, y: 32 },
     pubs: [
       { label: "Quality event", topic: "factory/quality/check-failed" },
       { label: "Production event", topic: "factory/production/run-started" },
@@ -43,13 +43,13 @@ const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer"
     consumerLabel: "Production + AI",
   },
   cloud: {
-    id: "cloud", name: "Cloud · Azure", accent: "blue", pt: { x: 80, y: 28 },
+    id: "cloud", name: "Cloud · Azure", accent: "blue", pt: { x: 70, y: 32 },
     pubs: [{ label: "AI recommendation", topic: "cloud/ai/recommendation" }],
     subs: ["factory/quality/>", "regional/report/>"],
     consumerLabel: "Quality + reports",
   },
   regional: {
-    id: "regional", name: "Regional DC", accent: "cyan", pt: { x: 50, y: 76 },
+    id: "regional", name: "Regional DC", accent: "cyan", pt: { x: 53, y: 65 },
     pubs: [{ label: "Daily report", topic: "regional/report/daily" }],
     subs: ["factory/production/>"],
     consumerLabel: "Production",
@@ -57,8 +57,10 @@ const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer"
 };
 
 const mk = (id: SiteId): Site => ({ ...DEFS[id], consumerOnline: true, received: 0, inBuffer: 0, outBuffer: [] });
-const producerPt = (s: Site): Pt => ({ x: s.pt.x, y: s.pt.y - 13 });
-const consumerPt = (s: Site): Pt => ({ x: s.pt.x, y: s.pt.y + (s.id === "factory" ? 18 : 14) });
+const producerPt = (s: Site): Pt =>
+  s.id === "regional" ? { x: s.pt.x - 16, y: s.pt.y + 20 } : { x: s.pt.x - 16, y: s.pt.y - 17 };
+const consumerPt = (s: Site): Pt =>
+  s.id === "regional" ? { x: s.pt.x + 16, y: s.pt.y + 20 } : { x: s.pt.x - 16, y: s.pt.y + 17 };
 
 export default function Lesson09EventMesh() {
   const { flyers, emit, remove } = useFlow();
@@ -89,7 +91,7 @@ export default function Lesson09EventMesh() {
       if (s.id === sourceId) {
         if (s.consumerOnline) {
           recvDelta[s.id] = (recvDelta[s.id] || 0) + 1;
-          window.setTimeout(() => emit({ from: s.pt, to: consumerPt(s), tone: "green", label: `${topic.split("/")[1]} event`, duration: 1.0 }), 700);
+          window.setTimeout(() => emit({ from: s.pt, to: consumerPt(s), tone: "green", label: `${topic.split("/")[1]} event`, duration: 0.7 }), 560);
           flash(s.id);
         }
         else inDelta[s.id] = (inDelta[s.id] || 0) + 1;
@@ -192,13 +194,6 @@ export default function Lesson09EventMesh() {
               </g>
             ))}
           </svg>
-
-          {/* faint mesh label at center */}
-          <Anchored pt={{ x: 50, y: 52 }} zIndex={0}>
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", color: wanUp ? "rgba(103,217,184,0.35)" : "rgba(239,90,106,0.4)" }}>
-              {wanUp ? "Event Mesh" : "WAN down"}
-            </span>
-          </Anchored>
 
           {sites.map((s) => (
             <div key={s.id}>
