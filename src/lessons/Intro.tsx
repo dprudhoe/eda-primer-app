@@ -14,14 +14,14 @@ export default function Intro({
       <div className="intro-hero">
         <img className="intro-logo" src={logoUrl} alt="Solace" />
         <h1>
-          Event-Driven Architecture,
+          Event-Driven Manufacturing,
           <br />
           <span className="accent">learned by doing.</span>
         </h1>
         <p>
-          A hands-on primer for engineers in manufacturing and industrial systems. No broker to
-          install, no code to write — just interactive lessons that show <em>why</em> different
-          messaging patterns exist and where each one fits.
+          A hands-on primer about event-driven architecture for engineers in manufacturing and
+          industrial systems. No broker to install, no code to write — just interactive lessons
+          that show <em>why</em> different messaging patterns exist and where each one fits.
         </p>
       </div>
 
