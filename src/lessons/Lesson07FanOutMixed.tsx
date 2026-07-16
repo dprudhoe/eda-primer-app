@@ -98,7 +98,11 @@ export default function Lesson07FanOutMixed() {
         if (l.id === "ai") return;
         if (l.pattern === "direct") {
           // direct: only live consumers receive; offline simply misses
-          if (l.online) emit({ from: HUB, to: cardPt(i), tone: "green", label: "live", duration: 0.85 });
+          if (l.online) {
+            const bend = queuePt(i);
+            emit({ from: HUB, to: bend, tone: "green", label: "live", duration: 0.65 });
+            window.setTimeout(() => emit({ from: bend, to: cardPt(i), tone: "green", label: "live", duration: 0.45 }), 660);
+          }
         } else {
           // durable queue / HTTP: the event lands in the queue that fronts the consumer
           emit({ from: HUB, to: queuePt(i), tone: l.online ? "green" : "amber", label: l.online ? "queued" : "buffered", duration: 0.85 });

@@ -58,9 +58,13 @@ const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer"
 
 const mk = (id: SiteId): Site => ({ ...DEFS[id], consumerOnline: true, received: 0, inBuffer: 0, outBuffer: [] });
 const producerPt = (s: Site): Pt =>
-  s.id === "regional" ? { x: s.pt.x - 16, y: s.pt.y + 20 } : { x: s.pt.x - 16, y: s.pt.y - 17 };
+  s.id === "regional"
+    ? { x: s.pt.x - 16, y: s.pt.y + 20 }
+    : { x: s.pt.x + (s.id === "cloud" ? 16 : -16), y: s.pt.y - 17 };
 const consumerPt = (s: Site): Pt =>
-  s.id === "regional" ? { x: s.pt.x + 16, y: s.pt.y + 20 } : { x: s.pt.x - 16, y: s.pt.y + 17 };
+  s.id === "regional"
+    ? { x: s.pt.x + 16, y: s.pt.y + 20 }
+    : { x: s.pt.x + (s.id === "cloud" ? 16 : -16), y: s.pt.y + 17 };
 
 export default function Lesson09EventMesh() {
   const { flyers, emit, remove } = useFlow();
