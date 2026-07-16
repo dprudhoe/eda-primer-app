@@ -92,14 +92,14 @@ export default function Lesson04Queues() {
     setQueues((cur) => cur.map((q) => ({ ...q, msgs: [], consumer: "none" })));
 
   return (
-    <div className="lesson-layout lesson4-layout">
+    <div className="lesson-layout">
       <div>
         <div className="stage-card">
           {/* publishers introduce the event; the broker fans it into matching queues below */}
           <div className="stage" style={{ minHeight: 118, display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "18px 24px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <Node icon="▣" name="Publishers" role="Publish to topics" accent="green" sub="lines 1 & 2" />
-              <div style={{ fontSize: 22, color: "var(--text-mute)" }}>→</div>
+              <div style={{ fontSize: 20, lineHeight: 1, color: "var(--text-mute)" }}>↓</div>
               <Broker active={!!lastEvent} />
             </div>
             <div style={{ height: 34, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
@@ -120,7 +120,7 @@ export default function Lesson04Queues() {
           </div>
 
           {/* stacked queues — fixed height, internal scroll (no layout jump) */}
-          <div className="stage" style={{ borderTop: "1px solid var(--line-soft)", padding: "16px 20px" }}>
+          <div className="stage" style={{ borderTop: "1px solid var(--line-soft)", padding: "16px 8px" }}>
             <div className="queue-fanout">
               <svg className="queue-fan-lines" viewBox="0 0 1000 360" preserveAspectRatio="none" aria-hidden="true">
                 <path className={queues[0]?.flash ? "active" : ""} d="M 500 0 L 165 72" />
