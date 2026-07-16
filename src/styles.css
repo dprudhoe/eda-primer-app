@@ -468,10 +468,10 @@ select {
   gap: 6px;
   padding: 14px 22px;
   min-width: 150px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid rgba(99, 213, 169, 0.48);
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(24, 91, 80, 0.94), rgba(15, 40, 66, 0.96));
-  box-shadow: 0 0 24px rgba(99, 213, 169, 0.18);
+  background: #093b5f;
+  box-shadow: none;
 }
 .broker.pill {
   border-radius: 999px;
