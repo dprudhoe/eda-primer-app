@@ -772,15 +772,65 @@ select {
 }
 
 /* full-width stacked queue row (lesson 4) */
+.queue-fanout {
+  position: relative;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+.queue-fan-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: visible;
+}
+.queue-fan-lines path {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 2;
+  stroke-dasharray: 7 8;
+  vector-effect: non-scaling-stroke;
+  transition: stroke 0.2s, filter 0.2s;
+}
+.queue-fan-lines path.active {
+  stroke: var(--green-bright);
+  filter: drop-shadow(0 0 5px rgba(99, 213, 169, 0.65));
+  animation: flow-dash 0.45s linear infinite;
+}
+@keyframes flow-dash {
+  to { stroke-dashoffset: -15; }
+}
+.queue-fan-source {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+}
+.queue-fan-source .broker {
+  min-width: 96px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.queue-fan-targets {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .queue-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 16px 128px;
+  grid-template-columns: minmax(0, 1fr) 14px 122px;
   gap: 6px;
   align-items: stretch;
 }
 .qr-queue {
-  display: grid;
-  grid-template-columns: 145px minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -798,11 +848,20 @@ select {
   gap: 8px;
   min-width: 0;
 }
+.queue-depth-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  color: var(--text-mute);
+  font-size: 9.5px;
+  line-height: 1;
+}
 .qr-msgs {
   display: flex;
   flex-direction: column-reverse;
   gap: 5px;
-  height: 96px;
+  height: 70px;
   overflow-y: auto;
   padding: 8px;
   border-radius: 7px;
@@ -831,7 +890,10 @@ select {
   width: 100%;
   padding-left: 5px;
   padding-right: 5px;
-  font-size: 11px;
+  min-height: 31px;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
 }
 .queue-consumer-status {
   color: var(--text-mute);

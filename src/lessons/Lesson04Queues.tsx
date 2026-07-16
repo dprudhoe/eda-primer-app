@@ -95,12 +95,10 @@ export default function Lesson04Queues() {
     <div className="lesson-layout">
       <div>
         <div className="stage-card">
-          {/* header: publishers → broker on top, evaluation on its own line below (no wrap jitter) */}
+          {/* publishers introduce the event; the broker fans it into matching queues below */}
           <div className="stage" style={{ minHeight: 118, display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "18px 24px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 22 }}>
               <Node icon="▣" name="Publishers" role="Publish to topics" accent="green" sub="lines 1 & 2" />
-              <div style={{ fontSize: 22, color: "var(--text-mute)" }}>→</div>
-              <Broker active={!!lastEvent} />
             </div>
             <div style={{ height: 34, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
               {lastEvent ? (
@@ -121,10 +119,20 @@ export default function Lesson04Queues() {
 
           {/* stacked queues — fixed height, internal scroll (no layout jump) */}
           <div className="stage" style={{ borderTop: "1px solid var(--line-soft)", padding: "16px 20px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {queues.map((q) => (
-                <QueueRow key={q.id} q={q} onConsumer={(c) => setConsumer(q.id, c)} />
-              ))}
+            <div className="queue-fanout">
+              <svg className="queue-fan-lines" viewBox="0 0 1000 360" preserveAspectRatio="none" aria-hidden="true">
+                <path className={queues[0]?.flash ? "active" : ""} d="M 170 180 L 230 60" />
+                <path className={queues[1]?.flash ? "active" : ""} d="M 170 180 L 230 180" />
+                <path className={queues[2]?.flash ? "active" : ""} d="M 170 180 L 230 300" />
+              </svg>
+              <div className="queue-fan-source">
+                <Broker small active={!!lastEvent} />
+              </div>
+              <div className="queue-fan-targets">
+                {queues.map((q) => (
+                  <QueueRow key={q.id} q={q} onConsumer={(c) => setConsumer(q.id, c)} />
+                ))}
+              </div>
             </div>
           </div>
 
@@ -203,7 +211,6 @@ function QueueRow({ q, onConsumer }: { q: Queue; onConsumer: (c: Consumer) => vo
         <div className="qr-info">
           <div className="queue-head">
             <span className="queue-name">{q.name}</span>
-            <span className="queue-depth">{q.msgs.length}</span>
           </div>
           <div className="queue-subs">
             {q.subs.map((s) => (
@@ -233,17 +240,19 @@ function QueueRow({ q, onConsumer }: { q: Queue; onConsumer: (c: Consumer) => vo
             )}
           </AnimatePresence>
         </div>
+        <div className="queue-depth-footer">
+          Queue depth <span className="queue-depth">{q.msgs.length}</span>
+        </div>
       </div>
 
       <div className={`queue-consumer-link ${q.consumer === "running" ? "active" : ""}`}>→</div>
 
       <Node
-        icon="▤"
         name="Consumer"
         role={q.consumer === "running" ? "Receiving messages" : "Not attached"}
         accent={q.consumer === "running" ? "green" : "slate"}
         lit={q.consumer === "running"}
-        style={{ minWidth: 0, justifyContent: "center" }}
+        style={{ minWidth: 0, justifyContent: "center", padding: 10 }}
       >
         <div className="queue-consumer-controls">
           {q.consumer === "running" ? (
