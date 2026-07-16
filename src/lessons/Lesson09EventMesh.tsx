@@ -10,8 +10,8 @@ import {
   InsightCard,
   MsgToken,
   Particle,
+  QueueChip,
   Stage,
-  Toggle,
   Accent,
 } from "../components/kit";
 import { useFlow, Pt } from "../components/useFlow";
@@ -31,8 +31,6 @@ type Site = {
   outBuffer: { topic: string; target: SiteId }[]; // held here because WAN is down
 };
 
-const SUB_OPTIONS = ["factory/quality/>", "factory/>", "cloud/ai/>", "regional/report/>", "none"];
-
 const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer" | "outBuffer">> = {
   factory: {
     id: "factory", name: "Factory Plant", accent: "green", pt: { x: 20, y: 28 },
@@ -40,7 +38,7 @@ const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer"
       { label: "Quality event", topic: "factory/quality/check-failed" },
       { label: "Production event", topic: "factory/production/run-started" },
     ],
-    sub: "cloud/ai/>",
+    sub: "factory/production/>",
   },
   cloud: {
     id: "cloud", name: "Cloud · Azure", accent: "blue", pt: { x: 80, y: 28 },
@@ -50,7 +48,7 @@ const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer"
   regional: {
     id: "regional", name: "Regional DC", accent: "cyan", pt: { x: 50, y: 76 },
     pubs: [{ label: "Daily report", topic: "regional/report/daily" }],
-    sub: "factory/quality/>",
+    sub: "factory/production/>",
   },
 };
 
@@ -114,9 +112,9 @@ export default function Lesson09EventMesh() {
       }),
     );
     emits.forEach((e) => {
-      emit({ from: src.pt, to: e.to, tone: "green", label: topic.split("/").slice(1).join("/"), duration: 1.0 });
+      window.setTimeout(() => emit({ from: src.pt, to: e.to, tone: "green", label: topic.split("/").slice(1).join("/"), duration: 1.0 }), 570);
       const target = cur.find((s) => s.id === e.site);
-      if (target?.consumerOnline) window.setTimeout(() => emit({ from: target.pt, to: consumerPt(target), tone: "green", label: "matched", duration: 0.55 }), 1020);
+      if (target?.consumerOnline) window.setTimeout(() => emit({ from: target.pt, to: consumerPt(target), tone: "green", label: "matched", duration: 0.55 }), 1600);
     });
   };
 
@@ -144,20 +142,13 @@ export default function Lesson09EventMesh() {
         return n;
       }),
     );
-    emits.forEach((e, i) => window.setTimeout(() => { emit({ from: e.from, to: e.to, tone: "green", label: "buffered", duration: 1.0 }); flash(e.site); }, i * 300));
+    emits.forEach((e, i) => window.setTimeout(() => {
+      emit({ from: e.from, to: e.to, tone: "green", label: "buffered", duration: 1.0 });
+      const target = cur.find((s) => s.id === e.site);
+      if (target?.consumerOnline) window.setTimeout(() => emit({ from: target.pt, to: consumerPt(target), tone: "green", label: "delivered", duration: 0.55 }), 1020);
+      flash(e.site);
+    }, i * 300));
   };
-
-  const setConsumerOnline = (id: SiteId, online: boolean) => {
-    setSites((ss) =>
-      ss.map((s) => {
-        if (s.id !== id) return s;
-        if (online && s.inBuffer > 0) { flash(id); return { ...s, consumerOnline: true, received: s.received + s.inBuffer, inBuffer: 0 }; }
-        return { ...s, consumerOnline: online };
-      }),
-    );
-  };
-
-  const setSub = (id: SiteId, sub: string) => setSites((ss) => ss.map((s) => (s.id === id ? { ...s, sub } : s)));
   const anyOut = sites.reduce((a, s) => a + s.outBuffer.length, 0);
 
   return (
@@ -210,8 +201,8 @@ export default function Lesson09EventMesh() {
               <Anchored pt={s.pt}>
                 <div style={{ textAlign: "center" }}>
                   <Broker small label={s.name} active={lit.has(s.id)} />
-                  {s.inBuffer > 0 ? <span className="node-badge badge-warn">consumer buffer {s.inBuffer}</span> : null}
-                  {s.outBuffer.length > 0 ? <span className="node-badge badge-warn blink">WAN buffer {s.outBuffer.length}</span> : null}
+                  {s.inBuffer > 0 ? <QueueChip depth={s.inBuffer} label="" cap={3} tone="amber" /> : null}
+                  {s.outBuffer.length > 0 ? <QueueChip depth={s.outBuffer.length} label="" cap={3} tone="amber" /> : null}
                 </div>
               </Anchored>
               <Anchored pt={consumerPt(s)}>
@@ -235,25 +226,11 @@ export default function Lesson09EventMesh() {
 
         <ControlBar>
           <div className="control-row">
-            {sites.map((s) => (
-              <ControlGroup key={s.id} label={`Publish from ${s.name}`}>
-                {s.pubs.map((p) => (
-                  <Btn key={p.topic} sm onClick={() => publish(s.id, p.topic)} title={p.topic}>{p.label}</Btn>
-                ))}
-              </ControlGroup>
-            ))}
-          </div>
-          <div className="control-row">
-            {sites.map((s) => (
-              <ControlGroup key={s.id} label={`${s.name}`}>
-                <select className="select-input" value={s.sub} onChange={(e) => setSub(s.id, e.target.value)}>
-                  {SUB_OPTIONS.map((o) => (<option key={o} value={o}>{o}</option>))}
-                </select>
-                <Toggle checked={s.consumerOnline} onChange={(v) => setConsumerOnline(s.id, v)} label="consumer" />
-              </ControlGroup>
-            ))}
-          </div>
-          <div className="control-row">
+            <ControlGroup label="Publish test event from Factory Plant">
+              {DEFS.factory.pubs.map((p) => (
+                <Btn key={p.topic} onClick={() => publish("factory", p.topic)} title={p.topic}>{p.label}</Btn>
+              ))}
+            </ControlGroup>
             <ControlGroup label="WAN link">
               {wanUp ? (
                 <Btn variant="danger" onClick={() => setWanUp(false)}>Disconnect WAN</Btn>
@@ -261,7 +238,6 @@ export default function Lesson09EventMesh() {
                 <Btn onClick={reconnectWan}>Reconnect WAN{anyOut ? ` (flush ${anyOut})` : ""}</Btn>
               )}
             </ControlGroup>
-            <span className="dim" style={{ fontSize: 12 }}>Three broker regions keep the mesh readable while showing local publishers and consumers.</span>
           </div>
         </ControlBar>
       </div>
@@ -269,11 +245,9 @@ export default function Lesson09EventMesh() {
       <div className="rail">
         <Card title="Try this">
           <div className="prose" style={{ fontSize: 13 }}>
-            <p><b style={{ color: "var(--green-bright)" }}>Propagation:</b> publish a Quality event from the factory — it flows across the mesh to the cloud, which subscribes to <code>factory/quality/&gt;</code>.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Selectivity:</b> publish a Production event — nobody remote wants it, so it stays local.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Quality:</b> flows from the factory publisher to its local broker, then only to Azure and its interested consumer.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Production:</b> reaches the local factory consumer and the Regional DC consumer.</p>
             <p><b style={{ color: "var(--green-bright)" }}>WAN outage:</b> disconnect the WAN, publish — messages buffer at the <em>publishing</em> broker; reconnect to flush.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Consumer outage:</b> take a consumer offline, publish — messages buffer at <em>its</em> broker; bring it back to drain.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Locality:</b> each of the three brokers has its own publisher and consumer; applications only connect locally.</p>
           </div>
         </Card>
 
@@ -283,7 +257,6 @@ export default function Lesson09EventMesh() {
             "Subscriptions propagate across the mesh — events flow only where interest exists.",
             "Brokers exchange events directly across the mesh, no central hub.",
             "A WAN outage buffers guaranteed messages at the publishing broker.",
-            "A consumer outage buffers messages at the consumer's own broker.",
             "Applications never need to know where remote consumers live.",
           ]}
         />

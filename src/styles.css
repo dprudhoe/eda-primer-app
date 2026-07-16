@@ -851,6 +851,16 @@ select {
   min-width: 0;
   width: 100%;
 }
+.btn.status-btn.online {
+  color: #04140e;
+  background: var(--green-bright);
+  border-color: var(--green-bright);
+}
+.btn.status-btn.offline {
+  color: #ffd8dc;
+  background: rgba(239, 90, 106, 0.2);
+  border-color: rgba(239, 90, 106, 0.65);
+}
 .lane-arrow {
   color: var(--text-mute);
   font-size: 14px;

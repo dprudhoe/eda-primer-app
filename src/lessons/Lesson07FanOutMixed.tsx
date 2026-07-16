@@ -186,8 +186,8 @@ export default function Lesson07FanOutMixed() {
           <div className="control-row" style={{ gap: 8 }}>
             <ControlGroup label="Take consumer apps online / offline">
               {lanes.map((l) => (
-                <Btn key={l.id} sm variant={l.online ? "default" : "ghost"} onClick={() => toggleOnline(l.id)}>
-                  {l.online ? "🟢" : "⚪"} {l.name}
+                <Btn key={l.id} sm className={`status-btn ${l.online ? "online" : "offline"}`} onClick={() => toggleOnline(l.id)}>
+                  {l.online ? "ON" : "OFF"} · {l.name}
                 </Btn>
               ))}
             </ControlGroup>

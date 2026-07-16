@@ -35,6 +35,7 @@ export default function Lesson02RetainedState() {
   const [observed, setObserved] = useState<State>(42.0);
   const [retained, setRetained] = useState<State | null>(null);
   const [rbe, setRbe] = useState(true);
+  const [running, setRunning] = useState(false);
   const [lastSuppressed, setLastSuppressed] = useState(false);
   const [stats, setStats] = useState({ sampled: 0, published: 0, suppressed: 0 });
   const [liveHistory, setLiveHistory] = useState<State[]>([]);
@@ -43,18 +44,24 @@ export default function Lesson02RetainedState() {
   const [lateEmpty, setLateEmpty] = useState(false);
   const lateConnectedRef = useRef(lateConnected);
   const retainedRef = useRef(retained);
+  const observedRef = useRef(observed);
+  const rbeRef = useRef(rbe);
   lateConnectedRef.current = lateConnected;
   retainedRef.current = retained;
+  observedRef.current = observed;
+  rbeRef.current = rbe;
   const timers = useRef<number[]>([]);
   const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
-  const sample = (change: boolean) => {
-    const state = change ? Math.round((observed + (Math.random() > 0.5 ? 0.5 : -0.4)) * 10) / 10 : observed;
+  const sample = () => {
+    const previous = observedRef.current;
+    const state = Math.random() < 0.45 ? previous : Math.round((previous + (Math.random() > 0.5 ? 0.5 : -0.4)) * 10) / 10;
     setObserved(state);
+    observedRef.current = state;
     setStats((s) => ({ ...s, sampled: s.sampled + 1 }));
     emit({ from: PLC, to: EDGE, tone: "green", label: formatPressure(state), duration: 0.5 });
-    if (rbe && retainedRef.current === state) {
+    if (rbeRef.current && retainedRef.current === state) {
       setLastSuppressed(true);
       setStats((s) => ({ ...s, suppressed: s.suppressed + 1 }));
       return;
@@ -75,6 +82,13 @@ export default function Lesson02RetainedState() {
       later(2240, () => setLateValue(state));
     }
   };
+
+  useEffect(() => {
+    if (!running) return;
+    const iv = window.setInterval(sample, 1150);
+    return () => window.clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
 
   const connectLate = () => {
     setLateConnected(true);
@@ -106,6 +120,8 @@ export default function Lesson02RetainedState() {
 
   const reset = () => {
     setObserved(42.0);
+    observedRef.current = 42.0;
+    setRunning(false);
     setRetained(null);
     retainedRef.current = null;
     setLastSuppressed(false);
@@ -135,7 +151,7 @@ export default function Lesson02RetainedState() {
           </svg>
 
           <Anchored pt={PLC}>
-            <Node icon="▤" name="Pressure PLC" role="Sensor / PLC" accent="green" value={formatPressure(observed)} sub="sampling pressure" style={{ minWidth: 126 }} />
+            <Node icon="▤" name="Pressure PLC" role="Sensor / PLC" accent="green" value={formatPressure(observed)} sub={running ? "sampling 1/s" : "idle"} lit={running} style={{ minWidth: 126 }} />
           </Anchored>
           <Anchored pt={EDGE}>
             <Node icon={<img src={ignitionLogo} alt="Ignition Edge" style={{ width: 30, height: 22, objectFit: "contain" }} />} name="Ignition Edge" accent="green" sub={rbe ? "publishes changes" : "publishes every sample"} style={{ minWidth: 126 }} />
@@ -212,8 +228,8 @@ export default function Lesson02RetainedState() {
         <ControlBar>
           <div className="control-row">
             <ControlGroup label="Publisher">
-              <Btn variant="primary" onClick={() => sample(false)}>Sample same pressure</Btn>
-              <Btn onClick={() => sample(true)}>Change pressure</Btn>
+              <Btn variant="primary" onClick={sample}>Publish one reading</Btn>
+              <Btn onClick={() => setRunning((value) => !value)}>{running ? "⏸ Stop continuous" : "▶ Start continuous"}</Btn>
               <Btn variant="danger" onClick={clearRetained} disabled={!retained}>Clear retained</Btn>
             </ControlGroup>
             <ControlGroup label="Publisher behavior">

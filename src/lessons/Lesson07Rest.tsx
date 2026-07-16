@@ -18,10 +18,10 @@ import {
 } from "../components/kit";
 import { useFlow, Pt } from "../components/useFlow";
 
-const CLIENT: Pt = { x: 15, y: 26 };
-const BROKER: Pt = { x: 45, y: 34 };
-const QUEUE: Pt = { x: 62, y: 72 };
-const REST: Pt = { x: 87, y: 78 };
+const CLIENT: Pt = { x: 13, y: 50 };
+const BROKER: Pt = { x: 39, y: 50 };
+const QUEUE: Pt = { x: 65, y: 50 };
+const REST: Pt = { x: 88, y: 50 };
 
 export default function Lesson07Rest() {
   const { flyers, emit, remove } = useFlow();
