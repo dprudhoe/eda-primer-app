@@ -92,7 +92,7 @@ export default function Lesson04Queues() {
     setQueues((cur) => cur.map((q) => ({ ...q, msgs: [], consumer: "none" })));
 
   return (
-    <div className="lesson-layout">
+    <div className="lesson-layout lesson4-layout">
       <div>
         <div className="stage-card">
           {/* publishers introduce the event; the broker fans it into matching queues below */}

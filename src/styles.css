@@ -272,6 +272,9 @@ select {
   gap: 20px;
   align-items: start;
 }
+.lesson-layout.lesson4-layout {
+  grid-template-columns: minmax(0, 1.75fr) minmax(300px, 0.8fr);
+}
 
 @media (max-width: 1080px) {
   .app {
@@ -855,8 +858,11 @@ select {
   border: 1px dashed var(--line-soft);
 }
 .qr-msgs .queue-msg {
-  padding: 4px 5px;
-  font-size: 9px;
+  padding: 4px 2px;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
 }
 .queue-consumer-link {
   display: grid;
