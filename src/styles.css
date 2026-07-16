@@ -470,10 +470,8 @@ select {
   min-width: 150px;
   border: 1px solid var(--line-strong);
   border-radius: 16px;
-  background:
-    radial-gradient(circle at 74% 24%, rgba(185, 255, 226, 0.28), transparent 40%),
-    linear-gradient(180deg, rgba(24, 91, 80, 0.94), rgba(15, 40, 66, 0.96));
-  box-shadow: 0 0 34px rgba(99, 213, 169, 0.26), inset 0 0 18px rgba(99, 213, 169, 0.14);
+  background: linear-gradient(180deg, rgba(24, 91, 80, 0.94), rgba(15, 40, 66, 0.96));
+  box-shadow: 0 0 24px rgba(99, 213, 169, 0.18);
 }
 .broker.pill {
   border-radius: 999px;
@@ -481,7 +479,6 @@ select {
 .broker-logo {
   width: 104px;
   height: auto;
-  filter: drop-shadow(0 0 8px rgba(61, 186, 145, 0.4));
 }
 .broker-label {
   font-size: 10px;

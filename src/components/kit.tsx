@@ -7,7 +7,7 @@ export type Accent = "green" | "cyan" | "amber" | "red" | "violet" | "blue" | "s
 /* ---------- Broker hub ---------- */
 
 export function Broker({
-  label = "Solace Broker",
+  label = "",
   pill = true,
   small = false,
   active = false,
