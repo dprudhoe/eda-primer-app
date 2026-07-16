@@ -859,16 +859,16 @@ select {
   border: 1px dashed var(--line-soft);
 }
 .qr-msgs .queue-msg {
-  padding: 5px 7px;
-  font-family: "Arial Narrow", "Avenir Next Condensed", ui-sans-serif, sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  padding: 5px;
+  font-family: "SF Mono", ui-monospace, "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.06em;
 }
 @container (max-width: 190px) {
   .qr-msgs .queue-msg {
     padding: 4px 2px;
-    font-size: 11px;
+    font-size: 10.5px;
   }
 }
 .queue-consumer-link {
