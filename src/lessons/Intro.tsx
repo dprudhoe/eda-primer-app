@@ -16,7 +16,7 @@ export default function Intro({
         <h1>
           Event-Driven Manufacturing,
           <br />
-          <span className="accent">learned by doing.</span>
+          <span className="accent">explored interactively.</span>
         </h1>
         <p>
           A hands-on primer about event-driven architecture for engineers in manufacturing and
@@ -38,9 +38,9 @@ export default function Intro({
           <div className="why-icon">📡</div>
           <h4>Beyond "just use MQTT"</h4>
           <p>
-            Publish/subscribe is a great start — but best-effort telemetry, durable work orders, and
-            cross-site distribution each demand different guarantees. Knowing which to use is the
-            skill.
+            Publish/subscribe is a great start — but live sensor readings, production work orders
+            that must survive disconnects, and cross-site distribution each need different delivery
+            behavior. Knowing when to use each pattern is the skill.
           </p>
         </div>
         <div className="why-card">
