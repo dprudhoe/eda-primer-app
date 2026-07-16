@@ -57,9 +57,9 @@ export default function Lesson07FanOutMixed() {
   const lanesRef = useRef(lanes);
   lanesRef.current = lanes;
 
-  const laneY = (i: number) => 9 + i * (82 / (INITIAL.length - 1));
-  const queuePt = (i: number): Pt => ({ x: 62, y: laneY(i) });
-  const cardPt = (i: number, queued: boolean): Pt => ({ x: queued ? 85 : 79, y: laneY(i) });
+  const laneY = (i: number) => 8 + i * (84 / (INITIAL.length - 1));
+  const queuePt = (i: number): Pt => ({ x: 63, y: laneY(i) });
+  const cardPt = (i: number, queued: boolean): Pt => ({ x: queued ? 84 : 79, y: laneY(i) });
 
   // drain durable queues (queue + http) whenever their app is online
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function Lesson07FanOutMixed() {
       <div>
         <Stage
           note="One publish, seven independent deliveries — each on its own contract. Live consumers react instantly (and miss events while offline); durable queues and the queue-backed REST endpoint accumulate while their app is offline, then drain on reconnect. The publisher never changes."
-          minHeight={520}
+          minHeight={600}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
             <line className="flow-line active" x1={PUB.x} y1={PUB.y} x2={HUB.x} y2={HUB.y} vectorEffect="non-scaling-stroke" />
@@ -147,11 +147,11 @@ export default function Lesson07FanOutMixed() {
               <div key={l.id}>
                 {queued ? (
                   <Anchored pt={queuePt(i)}>
-                    <QueueChip depth={l.depth} tone={QUEUE_TONE[l.id]} />
+                    <QueueChip depth={l.depth} label="" cap={4} tone={QUEUE_TONE[l.id]} />
                   </Anchored>
                 ) : null}
                 <Anchored pt={cardPt(i, queued)}>
-                  <div className={`node accent-${l.accent}`} style={{ minWidth: 190, padding: "9px 12px", opacity: !l.online ? 0.55 : 1, flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <div className={`node accent-${l.accent}`} style={{ minWidth: 176, padding: "8px 10px", opacity: !l.online ? 0.55 : 1, flexDirection: "row", alignItems: "center", gap: 9 }}>
                     <div className="node-icon" style={{ width: 28, height: 28, fontSize: 14 }}>{l.icon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="node-name" style={{ fontSize: 12 }}>{l.name}</div>

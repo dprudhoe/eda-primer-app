@@ -17,7 +17,7 @@ import {
 import { useFlow, Pt } from "../components/useFlow";
 import { topicMatches } from "../components/topics";
 
-type SiteId = "factory" | "cloud" | "regional" | "aws";
+type SiteId = "factory" | "cloud" | "regional";
 type Site = {
   id: SiteId;
   name: string;
@@ -35,7 +35,7 @@ const SUB_OPTIONS = ["factory/quality/>", "factory/>", "cloud/ai/>", "regional/r
 
 const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer" | "outBuffer">> = {
   factory: {
-    id: "factory", name: "Factory Plant", accent: "green", pt: { x: 26, y: 29 },
+    id: "factory", name: "Factory Plant", accent: "green", pt: { x: 20, y: 28 },
     pubs: [
       { label: "Quality event", topic: "factory/quality/check-failed" },
       { label: "Production event", topic: "factory/production/run-started" },
@@ -43,19 +43,14 @@ const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer"
     sub: "cloud/ai/>",
   },
   cloud: {
-    id: "cloud", name: "Cloud · Azure", accent: "blue", pt: { x: 74, y: 29 },
+    id: "cloud", name: "Cloud · Azure", accent: "blue", pt: { x: 80, y: 28 },
     pubs: [{ label: "AI recommendation", topic: "cloud/ai/recommendation" }],
     sub: "factory/quality/>",
   },
   regional: {
-    id: "regional", name: "Regional DC", accent: "cyan", pt: { x: 26, y: 76 },
+    id: "regional", name: "Regional DC", accent: "cyan", pt: { x: 50, y: 76 },
     pubs: [{ label: "Daily report", topic: "regional/report/daily" }],
     sub: "factory/quality/>",
-  },
-  aws: {
-    id: "aws", name: "Cloud · AWS", accent: "amber", pt: { x: 74, y: 76 },
-    pubs: [{ label: "Model updated", topic: "aws/model/updated" }],
-    sub: "factory/>",
   },
 };
 
@@ -63,7 +58,7 @@ const mk = (id: SiteId): Site => ({ ...DEFS[id], consumerOnline: true, received:
 
 export default function Lesson09EventMesh() {
   const { flyers, emit, remove } = useFlow();
-  const [sites, setSites] = useState<Site[]>([mk("factory"), mk("cloud")]);
+  const [sites, setSites] = useState<Site[]>([mk("factory"), mk("cloud"), mk("regional")]);
   const [wanUp, setWanUp] = useState(true);
   const [lit, setLit] = useState<Set<SiteId>>(new Set());
   const sitesRef = useRef(sites);
@@ -152,10 +147,6 @@ export default function Lesson09EventMesh() {
   };
 
   const setSub = (id: SiteId, sub: string) => setSites((ss) => ss.map((s) => (s.id === id ? { ...s, sub } : s)));
-  const addSite = (id: SiteId) => setSites((s) => (s.some((x) => x.id === id) ? s : [...s, mk(id)]));
-  const removeSite = (id: SiteId) => setSites((s) => s.filter((x) => x.id !== id));
-
-  const missing = (["regional", "aws"] as SiteId[]).filter((id) => !sites.some((s) => s.id === id));
   const anyOut = sites.reduce((a, s) => a + s.outBuffer.length, 0);
 
   return (
@@ -167,7 +158,7 @@ export default function Lesson09EventMesh() {
               ? `WAN is down. Each broker still serves its local apps; ${anyOut} guaranteed message(s) are buffered at their publishing broker until the link returns.`
               : "Every app publishes and subscribes to its local broker. Subscriptions propagate across the mesh, so an event flows broker-to-broker only where a consumer wants it."
           }
-          minHeight={560}
+          minHeight={540}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
             {/* full mesh backbone between every pair of brokers */}
@@ -193,11 +184,14 @@ export default function Lesson09EventMesh() {
 
           {sites.map((s) => (
             <Anchored pt={s.pt} key={s.id}>
-              <div className={`node accent-${s.accent} ${lit.has(s.id) ? "lit" : ""}`} style={{ minWidth: 208, alignItems: "center", gap: 8 }}>
+              <div className={`node accent-${s.accent} ${lit.has(s.id) ? "lit" : ""}`} style={{ minWidth: 178, alignItems: "center", gap: 6, padding: "10px 12px" }}>
                 <Broker small label={s.name} active={lit.has(s.id)} />
                 <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 3, textAlign: "center" }}>
+                  <div className="node-sub" style={{ color: "var(--green-bright)" }}>
+                    publisher · {s.pubs[0].label}
+                  </div>
                   <div style={{ fontSize: 10, color: "var(--text-mute)" }}>
-                    consumer {s.consumerOnline ? "" : "· offline"}
+                    consumer {s.consumerOnline ? "· online" : "· offline"}
                   </div>
                   <span className="queue-sub" style={{ alignSelf: "center" }}>{s.sub}</span>
                   <div className="node-sub">received {s.received}</div>
@@ -245,12 +239,7 @@ export default function Lesson09EventMesh() {
                 <Btn onClick={reconnectWan}>Reconnect WAN{anyOut ? ` (flush ${anyOut})` : ""}</Btn>
               )}
             </ControlGroup>
-            <ControlGroup label="Brokers in mesh (max 4)">
-              {missing.map((id) => (<Btn key={id} sm onClick={() => addSite(id)}>+ {DEFS[id].name}</Btn>))}
-              {sites.filter((s) => s.id !== "factory" && s.id !== "cloud").map((s) => (
-                <Btn key={s.id} sm variant="ghost" onClick={() => removeSite(s.id)}>✕ {s.name}</Btn>
-              ))}
-            </ControlGroup>
+            <span className="dim" style={{ fontSize: 12 }}>Three broker regions keep the mesh readable while showing local publishers and consumers.</span>
           </div>
         </ControlBar>
       </div>
@@ -262,7 +251,7 @@ export default function Lesson09EventMesh() {
             <p><b style={{ color: "var(--green-bright)" }}>Selectivity:</b> publish a Production event — nobody remote wants it, so it stays local.</p>
             <p><b style={{ color: "var(--green-bright)" }}>WAN outage:</b> disconnect the WAN, publish — messages buffer at the <em>publishing</em> broker; reconnect to flush.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Consumer outage:</b> take a consumer offline, publish — messages buffer at <em>its</em> broker; bring it back to drain.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Scale:</b> add Regional / AWS brokers — each with its own publisher and consumer.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Locality:</b> each of the three brokers has its own publisher and consumer; applications only connect locally.</p>
           </div>
         </Card>
 

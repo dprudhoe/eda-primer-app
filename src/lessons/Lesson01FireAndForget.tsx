@@ -16,7 +16,6 @@ import {
   Stage,
   StatPill,
   TagCard,
-  Toggle,
 } from "../components/kit";
 import { useFlow, Pt } from "../components/useFlow";
 
@@ -34,37 +33,25 @@ export default function Lesson01FireAndForget() {
   const { flyers, emit, remove } = useFlow();
   const [connected, setConnected] = useState(true);
   const [running, setRunning] = useState(false);
-  const [rbe, setRbe] = useState(true);
   const [temp, setTemp] = useState(72.4);
   const [dashValue, setDashValue] = useState<number | null>(72.4);
-  const [stats, setStats] = useState({ published: 0, delivered: 0, lost: 0, suppressed: 0 });
+  const [stats, setStats] = useState({ published: 0, delivered: 0, lost: 0 });
 
   const tempRef = useRef(temp);
   const connectedRef = useRef(connected);
-  const rbeRef = useRef(rbe);
-  const lastPubRef = useRef<number | null>(72.4);
   tempRef.current = temp;
   connectedRef.current = connected;
-  rbeRef.current = rbe;
   const timers = useRef<number[]>([]);
   const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
   const sample = () => {
-    // the PLC often reports the same value again (nothing changed on the line)
-    const prev = tempRef.current;
-    const t = Math.random() < 0.45 ? prev : drift(prev);
+    const t = drift(tempRef.current);
     tempRef.current = t;
     setTemp(t);
     // the raw reading always rises from the PLC into the Ignition Edge gateway
     emit({ from: PLC, to: EDGE, tone: "green", label: `${t.toFixed(1)}°C`, duration: 0.5 });
 
-    const willPublish = !rbeRef.current || t !== lastPubRef.current;
-    if (!willPublish) {
-      setStats((s) => ({ ...s, suppressed: s.suppressed + 1 }));
-      return; // Report-By-Exception: unchanged value is not published
-    }
-    lastPubRef.current = t;
     const isConnected = connectedRef.current;
     setStats((s) => ({
       ...s,
@@ -94,9 +81,7 @@ export default function Lesson01FireAndForget() {
 
   const note = !connected
     ? "The dashboard is disconnected. Ignition keeps publishing, but the broker has no one to deliver to — those readings are simply dropped."
-    : rbe
-    ? "Report-By-Exception is on: the PLC keeps sampling, but Ignition only publishes when the value actually changes. Unchanged readings never hit the wire."
-    : "Every sampled reading is published, changed or not. Each flows Ignition → broker → dashboard.";
+    : "Every fresh reading flows PLC → Ignition → broker → dashboard. If the dashboard is absent, nothing is stored for later.";
 
   return (
     <div className="lesson-layout">
@@ -126,7 +111,7 @@ export default function Lesson01FireAndForget() {
               icon={<img src={ignitionLogo} alt="Ignition Edge" style={{ width: 30, height: 22, objectFit: "contain" }} />}
               name="Ignition Edge"
               accent="green"
-              sub={!running ? "idle" : rbe ? "publishes on change" : "publishes every reading"}
+              sub={!running ? "idle" : "publishing every reading"}
               lit={running}
               style={{ minWidth: 120 }}
             />
@@ -174,9 +159,6 @@ export default function Lesson01FireAndForget() {
               <Btn variant="primary" onClick={sample}>Publish one reading</Btn>
               <Btn onClick={() => setRunning((r) => !r)}>{running ? "⏸ Stop continuous" : "▶ Start continuous"}</Btn>
             </ControlGroup>
-            <ControlGroup label="Ignition">
-              <Toggle checked={rbe} onChange={setRbe} label="Report by exception" />
-            </ControlGroup>
             <ControlGroup label="Consumer">
               {connected ? (
                 <Btn variant="danger" onClick={() => setConnected(false)}>Disconnect dashboard</Btn>
@@ -189,8 +171,7 @@ export default function Lesson01FireAndForget() {
             <StatPill label="Published" value={stats.published} tone="green" />
             <StatPill label="Delivered" value={stats.delivered} tone="cyan" />
             <StatPill label="Lost" value={stats.lost} tone="red" />
-            <StatPill label="Suppressed (RBE)" value={stats.suppressed} tone="amber" />
-            <Btn variant="ghost" sm onClick={() => setStats({ published: 0, delivered: 0, lost: 0, suppressed: 0 })}>Reset counters</Btn>
+            <Btn variant="ghost" sm onClick={() => setStats({ published: 0, delivered: 0, lost: 0 })}>Reset counters</Btn>
           </div>
         </ControlBar>
       </div>
@@ -220,17 +201,15 @@ export default function Lesson01FireAndForget() {
               <strong>operator dashboard</strong> subscribes and shows the live value.
             </p>
             <p>
-              With <strong>Report-By-Exception</strong>, the PLC may report the same value over and
-              over, but Ignition only publishes when it <em>changes</em> — cutting needless traffic.
-              Delivery itself is <strong>best-effort</strong>: the broker keeps nothing for a
-              consumer that isn't connected.
+              Delivery is <strong>best-effort</strong>: the broker keeps nothing for a consumer that
+              isn't connected. That tradeoff is appropriate here because another fresh reading will
+              arrive shortly.
             </p>
           </div>
         </Card>
 
         <InsightCard
           items={[
-            "Report-By-Exception publishes only on change — most telemetry links carry far less than they sample.",
             "Messages are not stored for an unavailable consumer.",
             "Occasional loss is acceptable when another update arrives shortly.",
             "For telemetry, freshness often matters more than perfect delivery.",

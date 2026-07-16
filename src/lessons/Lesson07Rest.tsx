@@ -18,7 +18,7 @@ import {
 } from "../components/kit";
 import { useFlow, Pt } from "../components/useFlow";
 
-const CLIENT: Pt = { x: 12, y: 26 };
+const CLIENT: Pt = { x: 15, y: 26 };
 const BROKER: Pt = { x: 40, y: 50 };
 const SUB: Pt = { x: 72, y: 24 };
 const QUEUE: Pt = { x: 60, y: 78 };

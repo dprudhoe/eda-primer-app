@@ -442,7 +442,7 @@ export function QueueChip({
   const color = `var(--${tone === "green" ? "green" : tone})`;
   return (
     <div className="qchip">
-      <span className="qchip-label">{label}</span>
+      {label ? <span className="qchip-label">{label}</span> : null}
       <div className="qcells">
         {Array.from({ length: cap }).map((_, i) => (
           <span
