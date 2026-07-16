@@ -34,10 +34,8 @@ type Lane = {
   delivered: number; // queue/http
 };
 
-const CAMERA: Pt = { x: 8, y: 50 };
-const AI_QUEUE: Pt = { x: 21, y: 50 };
-const AI: Pt = { x: 34, y: 50 };
-const HUB: Pt = { x: 56, y: 50 };
+const CAMERA: Pt = { x: 10, y: 50 };
+const HUB: Pt = { x: 38, y: 50 };
 const EVENT = "InspectionResult";
 
 const base = { online: true, received: 0, missed: 0, depth: 0, delivered: 0 };
@@ -45,18 +43,18 @@ const INITIAL: Lane[] = [
   { id: "ops", name: "Operations Dashboard", icon: "◎", accent: "cyan", pattern: "direct", protocol: "MQTT", desc: "Live notification", ...base },
   { id: "hist", name: "Historian", icon: "▥", accent: "green", pattern: "queue", protocol: "SMF", desc: "Durable ingestion", ...base },
   { id: "analytics", name: "Analytics Platform", icon: "▤", accent: "violet", pattern: "queue", protocol: "AMQP", desc: "Durable analytics", ...base },
+  { id: "ai", name: "AI Trigger", icon: "✦", accent: "violet", pattern: "queue", protocol: "SMF", desc: "Queued inference", ...base },
   { id: "qms", name: "Quality Mgmt System", icon: "✓", accent: "blue", pattern: "queue", protocol: "AMQP", desc: "Durable queue", ...base },
   { id: "hmi", name: "Line HMI", icon: "▦", accent: "amber", pattern: "direct", protocol: "MQTT", desc: "Live notification", ...base },
   { id: "rest", name: "REST Endpoint", icon: "⇄", accent: "green", pattern: "http", protocol: "REST", desc: "HTTP via queue", ...base },
 ];
 
-const QUEUE_TONE: Record<string, "blue" | "red" | "green" | "violet"> = { hist: "green", analytics: "violet", qms: "blue", rest: "green" };
+const QUEUE_TONE: Record<string, "blue" | "red" | "green" | "violet"> = { hist: "green", analytics: "violet", ai: "violet", qms: "blue", rest: "green" };
 
 export default function Lesson07FanOutMixed() {
   const { flyers, emit, remove } = useFlow();
   const [lanes, setLanes] = useState<Lane[]>(INITIAL);
   const [pubCount, setPubCount] = useState(0);
-  const [aiDepth, setAiDepth] = useState(0);
   const lanesRef = useRef(lanes);
   lanesRef.current = lanes;
 
@@ -69,7 +67,7 @@ export default function Lesson07FanOutMixed() {
     const iv = window.setInterval(() => {
       setLanes((ls) =>
         ls.map((l) =>
-          (l.pattern === "queue" || l.pattern === "http") && l.online && l.depth > 0
+          l.id !== "ai" && (l.pattern === "queue" || l.pattern === "http") && l.online && l.depth > 0
             ? { ...l, depth: l.depth - 1, delivered: l.delivered + 1 }
             : l,
         ),
@@ -79,17 +77,25 @@ export default function Lesson07FanOutMixed() {
   }, []);
 
   const publish = () => {
-    setPubCount((c) => c + 1);
-    setAiDepth((depth) => depth + 1);
-    emit({ from: CAMERA, to: AI_QUEUE, tone: "green", label: "camera frame", duration: 0.55 });
-    window.setTimeout(() => {
-      setAiDepth((depth) => Math.max(0, depth - 1));
-      emit({ from: AI_QUEUE, to: AI, tone: "green", label: "dequeued", duration: 0.45 });
-    }, 560);
-    window.setTimeout(() => emit({ from: AI, to: HUB, tone: "violet", label: EVENT, duration: 0.55 }), 1020);
     const cur = lanesRef.current;
+    const aiIndex = cur.findIndex((lane) => lane.id === "ai");
+    emit({ from: CAMERA, to: HUB, tone: "green", label: "camera frame", duration: 0.6 });
+    window.setTimeout(() => {
+      emit({ from: HUB, to: queuePt(aiIndex), tone: "violet", label: "queued for AI", duration: 0.8 });
+      setLanes((ls) => ls.map((lane) => lane.id === "ai" ? { ...lane, depth: lane.depth + 1 } : lane));
+    }, 620);
+    if (!cur[aiIndex].online) return;
+    window.setTimeout(() => {
+      emit({ from: queuePt(aiIndex), to: cardPt(aiIndex), tone: "violet", label: "camera frame", duration: 0.7 });
+      setLanes((ls) => ls.map((lane) => lane.id === "ai" ? { ...lane, depth: Math.max(0, lane.depth - 1), delivered: lane.delivered + 1 } : lane));
+    }, 1450);
+    window.setTimeout(() => {
+      emit({ from: cardPt(aiIndex), to: HUB, tone: "violet", label: EVENT, duration: 0.7 });
+      setPubCount((c) => c + 1);
+    }, 2200);
     window.setTimeout(() => {
       cur.forEach((l, i) => {
+        if (l.id === "ai") return;
         if (l.pattern === "direct") {
           // direct: only live consumers receive; offline simply misses
           if (l.online) emit({ from: HUB, to: cardPt(i), tone: "green", label: "live", duration: 0.85 });
@@ -100,11 +106,12 @@ export default function Lesson07FanOutMixed() {
       });
       setLanes((ls) =>
         ls.map((l) => {
+          if (l.id === "ai") return l;
           if (l.pattern === "direct") return l.online ? { ...l, received: l.received + 1 } : { ...l, missed: l.missed + 1 };
           return { ...l, depth: l.depth + 1 };
         }),
       );
-    }, 1590);
+    }, 2950);
   };
 
   const publishSequence = () => {
@@ -117,13 +124,11 @@ export default function Lesson07FanOutMixed() {
     <div className="lesson-layout">
       <div>
         <Stage
-          note="A camera frame enters the AI inference queue. The AI trigger inspects it, publishes one InspectionResult, and the broker fans that result out using the delivery contract each downstream consumer needs."
+          note="A camera publishes a frame to Solace. The broker queues it for the AI trigger; after inference, AI publishes InspectionResult back to Solace, which fans the result out to every interested consumer."
           minHeight={600}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <line className="flow-line active" x1={CAMERA.x} y1={CAMERA.y} x2={AI_QUEUE.x} y2={AI_QUEUE.y} vectorEffect="non-scaling-stroke" />
-            <line className="flow-line active" x1={AI_QUEUE.x} y1={AI_QUEUE.y} x2={AI.x} y2={AI.y} vectorEffect="non-scaling-stroke" />
-            <line className="flow-line active" x1={AI.x} y1={AI.y} x2={HUB.x} y2={HUB.y} vectorEffect="non-scaling-stroke" />
+            <line className="flow-line active" x1={CAMERA.x} y1={CAMERA.y} x2={HUB.x} y2={HUB.y} vectorEffect="non-scaling-stroke" />
             {lanes.map((l, i) => {
               const queued = l.pattern === "queue" || l.pattern === "http";
               const dead = l.pattern === "direct" && !l.online;
@@ -144,12 +149,6 @@ export default function Lesson07FanOutMixed() {
 
           <Anchored pt={CAMERA}>
             <Node icon="◉" name="Camera" role="Inspection feed" accent="cyan" style={{ width: 76, minWidth: 76, padding: "7px" }} />
-          </Anchored>
-          <Anchored pt={AI_QUEUE}>
-            <QueueChip depth={aiDepth} label="AI Q" cap={3} tone="violet" />
-          </Anchored>
-          <Anchored pt={AI}>
-            <Node icon="✦" name="AI" role="Publishes result" accent="violet" style={{ width: 76, minWidth: 76, padding: "7px" }} />
           </Anchored>
           <Anchored pt={HUB}>
             <Broker small active={pubCount > 0} />
@@ -231,8 +230,9 @@ export default function Lesson07FanOutMixed() {
         <Card title="Scenario">
           <div className="prose">
             <p>
-              A camera frame is queued for AI inspection. The AI application publishes an
-              <strong> InspectionResult</strong>, which feeds six downstream consumers. The operations
+              A camera publishes a frame through Solace into the AI trigger's queue. AI consumes the
+              frame, then publishes an <strong>InspectionResult</strong> back through the same broker.
+              That result feeds six downstream consumers. The operations
               dashboard and line HMI take it <strong>live</strong>; historian, analytics, and QMS use
               <strong> durable queues</strong>; REST is queue-backed. MQTT, AMQP, REST, and SMF coexist.
             </p>

@@ -58,7 +58,7 @@ const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer"
 
 const mk = (id: SiteId): Site => ({ ...DEFS[id], consumerOnline: true, received: 0, inBuffer: 0, outBuffer: [] });
 const producerPt = (s: Site): Pt => ({ x: s.pt.x, y: s.pt.y - 13 });
-const consumerPt = (s: Site): Pt => ({ x: s.pt.x, y: s.pt.y + 14 });
+const consumerPt = (s: Site): Pt => ({ x: s.pt.x, y: s.pt.y + (s.id === "factory" ? 18 : 14) });
 
 export default function Lesson09EventMesh() {
   const { flyers, emit, remove } = useFlow();
@@ -89,7 +89,7 @@ export default function Lesson09EventMesh() {
       if (s.id === sourceId) {
         if (s.consumerOnline) {
           recvDelta[s.id] = (recvDelta[s.id] || 0) + 1;
-          window.setTimeout(() => emit({ from: s.pt, to: consumerPt(s), tone: "green", label: "local", duration: 0.55 }), 560);
+          window.setTimeout(() => emit({ from: s.pt, to: consumerPt(s), tone: "green", label: `${topic.split("/")[1]} event`, duration: 1.0 }), 700);
           flash(s.id);
         }
         else inDelta[s.id] = (inDelta[s.id] || 0) + 1;
@@ -272,6 +272,8 @@ export default function Lesson09EventMesh() {
             "Subscriptions propagate across the mesh — events flow only where interest exists.",
             "Brokers exchange events directly across the mesh, no central hub.",
             "A WAN outage buffers guaranteed messages at the publishing broker.",
+            "A Factory broker can sit in a DMZ and initiate one outbound, bidirectional mesh connection—avoiding separate inbound firewall openings.",
+            "That single secure channel supports orchestration across cloud and remote data centers at many locations.",
             "Applications never need to know where remote consumers live.",
           ]}
         />
