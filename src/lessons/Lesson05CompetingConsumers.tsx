@@ -197,22 +197,14 @@ export default function Lesson05CompetingConsumers() {
             <StatPill label="Total inspected" value={totalProcessed} tone="green" />
           </div>
           <div className="control-row">
-            {workers.map((w) => (
-              <ControlGroup key={w.id} label={w.name}>
-                <Slider
-                  label="speed"
-                  value={w.speedMs}
-                  min={500}
-                  max={2600}
-                  step={100}
-                  unit="ms"
-                  onChange={(v) => setSpeed(w.id, v)}
-                />
-                <Btn sm onClick={() => togglePause(w.id)}>
-                  {w.paused ? "Resume" : "Pause"}
-                </Btn>
-              </ControlGroup>
-            ))}
+            <div className="inspector-speed-grid">
+              {workers.map((w) => (
+                <ControlGroup key={w.id} label={w.name}>
+                  <Slider label="speed" value={w.speedMs} min={500} max={2600} step={100} unit="ms" onChange={(v) => setSpeed(w.id, v)} />
+                  <Btn sm onClick={() => togglePause(w.id)}>{w.paused ? "Resume" : "Pause"}</Btn>
+                </ControlGroup>
+              ))}
+            </div>
           </div>
         </ControlBar>
       </div>

@@ -17,10 +17,10 @@ import {
 } from "../components/kit";
 import { useFlow, Pt } from "../components/useFlow";
 
-const MES: Pt = { x: 10, y: 30 };
+const MES: Pt = { x: 13, y: 30 };
 const HUB: Pt = { x: 42, y: 30 };
-const CONSUMER: Pt = { x: 82, y: 30 };
-const DB: Pt = { x: 82, y: 82 };
+const CONSUMER: Pt = { x: 86, y: 30 };
+const DB: Pt = { x: 86, y: 82 };
 
 type Status = "pending" | "ok" | "fail";
 const STEP_LABELS = [
@@ -70,7 +70,7 @@ export default function Lesson03QoS() {
         case 2: // delivering to consumer
           if (el >= 850) {
             setStep(2, "ok");
-            emit({ from: CONSUMER, to: HUB, tone: "violet", label: "PUBACK (QoS 1)", duration: 0.8 });
+            emit({ from: CONSUMER, to: HUB, tone: "violet", label: "✓ ACK", duration: 1.05 });
             adv(3);
           }
           break;
@@ -108,11 +108,12 @@ export default function Lesson03QoS() {
     emit({ from: MES, to: HUB, tone: "green", label: "WorkOrderReleased", duration: 0.7 });
   };
 
-  const held = running && m.current.stage === 1 && !consumerUp;
+  const awaitingAck = running && m.current.stage >= 1 && m.current.stage <= 3;
+  const heldOffline = running && m.current.stage === 1 && !consumerUp;
   const businessOk = steps[5] === "ok";
   const businessFail = steps[5] === "fail";
 
-  const note = held
+  const note = heldOffline
     ? "The consumer is offline — but the message is not lost. QoS 1 holds it at the broker and will redeliver the moment the consumer reconnects."
     : businessFail
     ? "Transport succeeded at every layer — yet the business transaction failed. QoS delivered the bytes; it can't commit your database."
@@ -136,9 +137,12 @@ export default function Lesson03QoS() {
           <Anchored pt={HUB}>
             <Broker active={running} />
           </Anchored>
-          {held ? (
+          {awaitingAck ? (
             <Anchored pt={{ x: 42, y: 52 }}>
-              <span className="node-badge badge-warn blink">✦ 1 held (QoS 1)</span>
+              <div className="qchip" style={{ minWidth: 108 }}>
+                <span className="qchip-label">QoS 1 · awaiting ack</span>
+                <MsgToken label="1 held" tone={heldOffline ? "amber" : "violet"} />
+              </div>
             </Anchored>
           ) : null}
           <Anchored pt={CONSUMER}>

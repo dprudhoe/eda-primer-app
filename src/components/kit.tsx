@@ -132,14 +132,16 @@ export function Toggle({
   checked,
   onChange,
   label,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;
+  disabled?: boolean;
 }) {
   return (
-    <label className="toggle">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label className={`toggle ${disabled ? "disabled" : ""}`}>
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       <span className="track">
         <span className="knob" />
       </span>
@@ -156,6 +158,7 @@ export function Slider({
   step = 1,
   unit = "",
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: number;
@@ -164,6 +167,7 @@ export function Slider({
   step?: number;
   unit?: string;
   onChange: (v: number) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="slider-field">
@@ -180,6 +184,7 @@ export function Slider({
         min={min}
         max={max}
         step={step}
+        disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
       />
     </div>

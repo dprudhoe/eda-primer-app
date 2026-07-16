@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
+import ignitionLogo from "../assets/ignition-edge.webp";
 import {
   Anchored,
   Broker,
@@ -19,17 +20,19 @@ import {
 } from "../components/kit";
 import { useFlow, Pt } from "../components/useFlow";
 
-const MACHINE: Pt = { x: 12, y: 50 };
+const PLC: Pt = { x: 16, y: 78 };
+const EDGE: Pt = { x: 16, y: 30 };
 const HUB: Pt = { x: 45, y: 42 };
 const RETAIN: Pt = { x: 45, y: 82 };
 const LIVE: Pt = { x: 83, y: 25 };
 const LATE: Pt = { x: 83, y: 72 };
 
-type State = "RUNNING" | "STOPPED";
+type State = number;
+const formatPressure = (value: number) => `${value.toFixed(1)} PSI`;
 
 export default function Lesson02RetainedState() {
   const { flyers, emit, remove } = useFlow();
-  const [observed, setObserved] = useState<State | null>(null);
+  const [observed, setObserved] = useState<State>(42.0);
   const [retained, setRetained] = useState<State | null>(null);
   const [rbe, setRbe] = useState(true);
   const [lastSuppressed, setLastSuppressed] = useState(false);
@@ -46,9 +49,11 @@ export default function Lesson02RetainedState() {
   const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
-  const publish = (state: State) => {
+  const sample = (change: boolean) => {
+    const state = change ? Math.round((observed + (Math.random() > 0.5 ? 0.5 : -0.4)) * 10) / 10 : observed;
     setObserved(state);
     setStats((s) => ({ ...s, sampled: s.sampled + 1 }));
+    emit({ from: PLC, to: EDGE, tone: "green", label: formatPressure(state), duration: 0.5 });
     if (rbe && retainedRef.current === state) {
       setLastSuppressed(true);
       setStats((s) => ({ ...s, suppressed: s.suppressed + 1 }));
@@ -58,28 +63,28 @@ export default function Lesson02RetainedState() {
     setRetained(state);
     retainedRef.current = state;
     setStats((s) => ({ ...s, published: s.published + 1 }));
-    const tone = state === "RUNNING" ? "green" : "amber";
-    // producer → broker, then broker stores it down into the retained slot
-    emit({ from: MACHINE, to: HUB, tone, label: state, duration: 0.7 });
-    later(720, () => emit({ from: HUB, to: RETAIN, tone, label: state, duration: 0.6 }));
+    const tone = "green" as const;
+    // PLC sample rises to Ignition; changed values continue to broker and retained slot
+    later(520, () => emit({ from: EDGE, to: HUB, tone, label: formatPressure(state), duration: 0.7 }));
+    later(1240, () => emit({ from: HUB, to: RETAIN, tone, label: formatPressure(state), duration: 0.6 }));
     // live consumer receives the transition (state applied on arrival, once)
-    later(720, () => emit({ from: HUB, to: LIVE, tone, label: state, duration: 1 }));
-    later(1720, () => setLiveHistory((h) => [...h, state]));
+    later(1240, () => emit({ from: HUB, to: LIVE, tone, label: formatPressure(state), duration: 1 }));
+    later(2240, () => setLiveHistory((h) => [...h, state]));
     if (lateConnectedRef.current) {
-      later(720, () => emit({ from: HUB, to: LATE, tone, label: state, duration: 1 }));
-      later(1720, () => setLateValue(state));
+      later(1240, () => emit({ from: HUB, to: LATE, tone, label: formatPressure(state), duration: 1 }));
+      later(2240, () => setLateValue(state));
     }
   };
 
   const connectLate = () => {
     setLateConnected(true);
-    if (retained) {
+    if (retained != null) {
       setLateEmpty(false);
-      const tone = retained === "RUNNING" ? "green" : "amber";
+      const tone = "green" as const;
       // hop 1: retained slot → broker (the broker replays what it holds)
-      emit({ from: RETAIN, to: HUB, tone, label: `${retained} · retained`, duration: 0.7 });
+      emit({ from: RETAIN, to: HUB, tone, label: `${formatPressure(retained)} · retained`, duration: 0.7 });
       // hop 2: broker → late consumer (single, deterministic)
-      later(700, () => emit({ from: HUB, to: LATE, tone, label: retained, duration: 0.9 }));
+      later(700, () => emit({ from: HUB, to: LATE, tone, label: formatPressure(retained), duration: 0.9 }));
       later(1650, () => setLateValue(retained));
     } else {
       setLateEmpty(true);
@@ -100,7 +105,7 @@ export default function Lesson02RetainedState() {
   };
 
   const reset = () => {
-    setObserved(null);
+    setObserved(42.0);
     setRetained(null);
     retainedRef.current = null;
     setLastSuppressed(false);
@@ -109,29 +114,31 @@ export default function Lesson02RetainedState() {
     disconnectLate();
   };
 
-  const stateTone = (s: State) => (s === "RUNNING" ? "green" : "amber");
-
   return (
     <div className="lesson-layout">
       <div>
         <Stage
           note={
-            lastSuppressed && observed !== null
-              ? `Report by Exception is on. Repeating ${observed} is sampled by the PLC but suppressed; the broker continues holding the last published state.`
+            lastSuppressed
+              ? `Report by Exception suppressed the unchanged ${formatPressure(observed)} sample. The broker still retains the last published pressure.`
               : retained
-              ? `The broker is holding one retained value: ${retained}. Anyone connecting now receives exactly that — and nothing about how it got there.`
+              ? `The broker is holding one retained value: ${formatPressure(retained)}. Anyone connecting now receives it immediately.`
               : "No retained value is stored. A consumer connecting now would receive nothing until the next publish."
           }
           minHeight={400}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <line className="flow-line active" x1={MACHINE.x} y1={MACHINE.y} x2={HUB.x} y2={HUB.y} vectorEffect="non-scaling-stroke" />
+            <line className="flow-line active" x1={PLC.x} y1={PLC.y} x2={EDGE.x} y2={EDGE.y} vectorEffect="non-scaling-stroke" />
+            <line className="flow-line active" x1={EDGE.x} y1={EDGE.y} x2={HUB.x} y2={HUB.y} vectorEffect="non-scaling-stroke" />
             <line className="flow-line active" x1={HUB.x} y1={HUB.y} x2={LIVE.x} y2={LIVE.y} vectorEffect="non-scaling-stroke" />
             <line className={`flow-line ${lateConnected ? "active" : "dead"}`} x1={HUB.x} y1={HUB.y} x2={LATE.x} y2={LATE.y} vectorEffect="non-scaling-stroke" />
           </svg>
 
-          <Anchored pt={MACHINE}>
-            <Node icon="⚙" name="Filler #3 PLC" role="State publisher" accent="green" value={observed ?? "—"} sub={rbe ? "reports changes only" : "reports every sample"} />
+          <Anchored pt={PLC}>
+            <Node icon="▤" name="Pressure PLC" role="Sensor / PLC" accent="green" value={formatPressure(observed)} sub="sampling pressure" style={{ minWidth: 126 }} />
+          </Anchored>
+          <Anchored pt={EDGE}>
+            <Node icon={<img src={ignitionLogo} alt="Ignition Edge" style={{ width: 30, height: 22, objectFit: "contain" }} />} name="Ignition Edge" accent="green" sub={rbe ? "publishes changes" : "publishes every sample"} style={{ minWidth: 126 }} />
           </Anchored>
 
           <Anchored pt={HUB}>
@@ -153,7 +160,7 @@ export default function Lesson02RetainedState() {
                 Retained slot
               </div>
               <div style={{ marginTop: 6 }}>
-                {retained ? <MsgToken label={retained} tone={stateTone(retained)} /> : <span className="dim" style={{ fontSize: 12 }}>empty</span>}
+                {retained != null ? <MsgToken label={formatPressure(retained)} /> : <span className="dim" style={{ fontSize: 12 }}>empty</span>}
               </div>
             </div>
           </Anchored>
@@ -165,8 +172,8 @@ export default function Lesson02RetainedState() {
                   <span className="dim" style={{ fontSize: 11 }}>waiting…</span>
                 ) : (
                   liveHistory.map((h, i) => (
-                    <span key={i} className="mono" style={{ fontSize: 10, color: h === "RUNNING" ? "var(--green-bright)" : "var(--amber)" }}>
-                      {h}
+                    <span key={i} className="mono" style={{ fontSize: 10, color: "var(--green-bright)" }}>
+                      {formatPressure(h)}
                     </span>
                   ))
                 )}
@@ -180,7 +187,7 @@ export default function Lesson02RetainedState() {
               name="Late Dashboard"
               role="Connects late"
               accent={lateConnected ? "violet" : "slate"}
-              value={lateConnected ? lateValue ?? (lateEmpty ? "—" : "…") : "—"}
+              value={lateConnected ? lateValue != null ? formatPressure(lateValue) : lateEmpty ? "—" : "…" : "—"}
               sub={!lateConnected ? "offline" : lateEmpty ? "connected — nothing retained" : lateValue ? "current state only" : "connecting…"}
               badge={lateConnected ? { text: "Connected", kind: "ok" } : { text: "Offline", kind: "off" }}
               offline={!lateConnected}
@@ -205,8 +212,8 @@ export default function Lesson02RetainedState() {
         <ControlBar>
           <div className="control-row">
             <ControlGroup label="Publisher">
-              <Btn variant="primary" onClick={() => publish("RUNNING")}>Sample RUNNING</Btn>
-              <Btn onClick={() => publish("STOPPED")}>Sample STOPPED</Btn>
+              <Btn variant="primary" onClick={() => sample(false)}>Sample same pressure</Btn>
+              <Btn onClick={() => sample(true)}>Change pressure</Btn>
               <Btn variant="danger" onClick={clearRetained} disabled={!retained}>Clear retained</Btn>
             </ControlGroup>
             <ControlGroup label="Publisher behavior">
@@ -231,17 +238,16 @@ export default function Lesson02RetainedState() {
 
       <div className="rail">
         <Prediction
-          question="You publish RUNNING, then STOPPED. A dashboard connects afterwards. What does it receive?"
+          question="Pressure changes several times while a dashboard is offline. What does it receive when it connects?"
           choices={[
-            { id: "a", text: "Both RUNNING and STOPPED, in order" },
-            { id: "b", text: "STOPPED only — the current retained state", correct: true },
+            { id: "a", text: "Every pressure sample, in order" },
+            { id: "b", text: "The last published pressure only", correct: true },
             { id: "c", text: "Nothing until the next publish" },
           ]}
           reveal={
             <>
-              <b>STOPPED only.</b> The retained value answers “what is true now?” The late dashboard
-              never sees that a RUNNING→STOPPED transition occurred — that history lived in the{" "}
-              <em>events</em>, which it wasn't around to receive.
+              <b>The last published pressure only.</b> Report by Exception avoids publishing stable
+              duplicates, while retain gives the late dashboard the latest known value immediately.
             </>
           }
         />
@@ -249,11 +255,11 @@ export default function Lesson02RetainedState() {
         <Card title="Scenario">
           <div className="prose">
             <p>
-              A machine publishes state <strong>RUNNING</strong>, then later <strong>STOPPED</strong>.
-              The broker <strong>retains</strong> only the latest value for that topic.
+              A pressure transmitter is sampled by <strong>Ignition Edge</strong>. The PLC may report
+              the same pressure repeatedly, but only changed values need to cross the network.
             </p>
             <p>
-              With <strong>Report by Exception</strong>, repeated samples of the same state are not
+              With <strong>Report by Exception</strong>, repeated samples of the same value are not
               republished. Retain still gives a late subscriber the last known change, combining
               bandwidth efficiency with immediate state recovery.
             </p>

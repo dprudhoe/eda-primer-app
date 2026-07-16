@@ -55,6 +55,8 @@ const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer"
 };
 
 const mk = (id: SiteId): Site => ({ ...DEFS[id], consumerOnline: true, received: 0, inBuffer: 0, outBuffer: [] });
+const producerPt = (s: Site): Pt => ({ x: s.pt.x, y: s.pt.y - 13 });
+const consumerPt = (s: Site): Pt => ({ x: s.pt.x, y: s.pt.y + 14 });
 
 export default function Lesson09EventMesh() {
   const { flyers, emit, remove } = useFlow();
@@ -80,11 +82,16 @@ export default function Lesson09EventMesh() {
     const inDelta: Record<string, number> = {};
     const outAdd: { topic: string; target: SiteId }[] = [];
     const emits: { to: Pt; site: SiteId }[] = [];
+    emit({ from: producerPt(src), to: src.pt, tone: "green", label: topic.split("/").slice(-1)[0], duration: 0.55 });
 
     cur.forEach((s) => {
       if (!active(s.sub) || !topicMatches(s.sub, topic)) return;
       if (s.id === sourceId) {
-        if (s.consumerOnline) { recvDelta[s.id] = (recvDelta[s.id] || 0) + 1; flash(s.id); }
+        if (s.consumerOnline) {
+          recvDelta[s.id] = (recvDelta[s.id] || 0) + 1;
+          window.setTimeout(() => emit({ from: s.pt, to: consumerPt(s), tone: "green", label: "local", duration: 0.55 }), 560);
+          flash(s.id);
+        }
         else inDelta[s.id] = (inDelta[s.id] || 0) + 1;
       } else if (!wan) {
         outAdd.push({ topic, target: s.id }); // buffered at the publishing broker
@@ -106,7 +113,11 @@ export default function Lesson09EventMesh() {
         return n;
       }),
     );
-    emits.forEach((e) => emit({ from: src.pt, to: e.to, tone: "green", label: topic.split("/").slice(1).join("/"), duration: 1.0 }));
+    emits.forEach((e) => {
+      emit({ from: src.pt, to: e.to, tone: "green", label: topic.split("/").slice(1).join("/"), duration: 1.0 });
+      const target = cur.find((s) => s.id === e.site);
+      if (target?.consumerOnline) window.setTimeout(() => emit({ from: target.pt, to: consumerPt(target), tone: "green", label: "matched", duration: 0.55 }), 1020);
+    });
   };
 
   const reconnectWan = () => {
@@ -173,6 +184,12 @@ export default function Lesson09EventMesh() {
                 />
               )),
             )}
+            {sites.map((s) => (
+              <g key={`local-${s.id}`}>
+                <line className="flow-line active" x1={producerPt(s).x} y1={producerPt(s).y} x2={s.pt.x} y2={s.pt.y} vectorEffect="non-scaling-stroke" />
+                <line className={`flow-line ${s.consumerOnline ? "active" : "dead"}`} x1={s.pt.x} y1={s.pt.y} x2={consumerPt(s).x} y2={consumerPt(s).y} vectorEffect="non-scaling-stroke" />
+              </g>
+            ))}
           </svg>
 
           {/* faint mesh label at center */}
@@ -183,23 +200,28 @@ export default function Lesson09EventMesh() {
           </Anchored>
 
           {sites.map((s) => (
-            <Anchored pt={s.pt} key={s.id}>
-              <div className={`node accent-${s.accent} ${lit.has(s.id) ? "lit" : ""}`} style={{ minWidth: 178, alignItems: "center", gap: 6, padding: "10px 12px" }}>
-                <Broker small label={s.name} active={lit.has(s.id)} />
-                <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 3, textAlign: "center" }}>
-                  <div className="node-sub" style={{ color: "var(--green-bright)" }}>
-                    publisher · {s.pubs[0].label}
-                  </div>
-                  <div style={{ fontSize: 10, color: "var(--text-mute)" }}>
-                    consumer {s.consumerOnline ? "· online" : "· offline"}
-                  </div>
-                  <span className="queue-sub" style={{ alignSelf: "center" }}>{s.sub}</span>
-                  <div className="node-sub">received {s.received}</div>
-                  {s.inBuffer > 0 ? <span className="node-badge badge-warn" style={{ alignSelf: "center", margin: 0 }}>consumer buffer {s.inBuffer}</span> : null}
-                  {s.outBuffer.length > 0 ? <span className="node-badge badge-warn blink" style={{ alignSelf: "center", margin: 0 }}>WAN buffer {s.outBuffer.length}</span> : null}
+            <div key={s.id}>
+              <Anchored pt={producerPt(s)}>
+                <div className="node accent-green" style={{ minWidth: 76, padding: "7px 8px", textAlign: "center" }}>
+                  <div className="node-name" style={{ fontSize: 9 }}>Publisher</div>
+                  <div className="node-role">{s.pubs[0].label}</div>
                 </div>
-              </div>
-            </Anchored>
+              </Anchored>
+              <Anchored pt={s.pt}>
+                <div style={{ textAlign: "center" }}>
+                  <Broker small label={s.name} active={lit.has(s.id)} />
+                  {s.inBuffer > 0 ? <span className="node-badge badge-warn">consumer buffer {s.inBuffer}</span> : null}
+                  {s.outBuffer.length > 0 ? <span className="node-badge badge-warn blink">WAN buffer {s.outBuffer.length}</span> : null}
+                </div>
+              </Anchored>
+              <Anchored pt={consumerPt(s)}>
+                <div className={`node accent-${s.accent} ${s.consumerOnline ? "" : "offline"}`} style={{ minWidth: 88, padding: "7px 8px", textAlign: "center" }}>
+                  <div className="node-name" style={{ fontSize: 9 }}>Consumer</div>
+                  <span className="queue-sub" style={{ fontSize: 7.5 }}>{s.sub}</span>
+                  <div className="node-role">received {s.received}</div>
+                </div>
+              </Anchored>
+            </div>
           ))}
 
           <AnimatePresence>

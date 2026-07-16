@@ -833,6 +833,24 @@ select {
   background: rgba(255, 255, 255, 0.04);
   transition: background 0.2s, box-shadow 0.2s;
 }
+.toggle.disabled,
+.slider-field:has(input:disabled) {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.inspector-speed-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.inspector-speed-grid .control-group {
+  min-width: 0;
+}
+.inspector-speed-grid .slider-field {
+  min-width: 0;
+  width: 100%;
+}
 .lane-arrow {
   color: var(--text-mute);
   font-size: 14px;

@@ -43,6 +43,7 @@ export default function Lesson06Reliability() {
   const [dmqEnabled, setDmqEnabled] = useState(true);
   const [dbUp, setDbUp] = useState(true);
   const [paused, setPaused] = useState(false);
+  const [demoActive, setDemoActive] = useState(false);
 
   const [queue, setQueue] = useState<Msg[]>([]);
   const [dmq, setDmq] = useState<Dead[]>([]);
@@ -147,20 +148,27 @@ export default function Lesson06Reliability() {
   }, []);
 
   // self-playing policy demos
+  const beginDemo = (durationMs: number) => {
+    setDemoActive(true);
+    setDmq([]);
+    setQueue([]);
+    setProc(null);
+    laterTimer(durationMs, () => setDemoActive(false));
+  };
   const demoRetryRecover = () => {
+    beginDemo(8500);
     setMaxRetries(5); setRetryDelay(2); setTtlSec(0); setDmqEnabled(true); setPaused(false); setDbUp(false);
-    setQueue([]); setProc(null);
     laterTimer(60, () => add("ok", `WO-${1000 + mId}`));
     laterTimer(5200, () => setDbUp(true)); // database comes back → next retry succeeds
   };
   const demoRetryLimit = () => {
+    beginDemo(12500);
     setMaxRetries(3); setRetryDelay(2); setTtlSec(0); setDmqEnabled(true); setPaused(false); setDbUp(false);
-    setQueue([]); setProc(null);
     laterTimer(60, () => add("ok", `WO-${1000 + mId}`)); // DB stays down → exhausts retries → DMQ
   };
   const demoTtl = () => {
+    beginDemo(9000);
     setMaxRetries(5); setRetryDelay(2); setTtlSec(8); setDmqEnabled(true); setPaused(true); setDbUp(true);
-    setQueue([]); setProc(null);
     laterTimer(60, () => add("ok", `WO-${1000 + mId}`)); // paused → TTL counts down → expires
   };
 
@@ -270,31 +278,31 @@ export default function Lesson06Reliability() {
         <ControlBar>
           <div className="control-row">
             <ControlGroup label="Publish">
-              <Btn variant="primary" onClick={() => add("ok", `WO-${1000 + mId}`)}>Publish valid work order</Btn>
-              <Btn variant="danger" onClick={() => add("perm", `PAYLOAD-${1000 + mId}·bad`)}>Publish invalid payload</Btn>
+              <Btn variant="primary" disabled={demoActive} onClick={() => add("ok", `WO-${1000 + mId}`)}>Publish valid work order</Btn>
+              <Btn variant="danger" disabled={demoActive} onClick={() => add("perm", `PAYLOAD-${1000 + mId}·bad`)}>Publish invalid payload</Btn>
             </ControlGroup>
           </div>
           <div className="control-row">
             <ControlGroup label="Policies">
-              <Slider label="Max retries" value={maxRetries} min={0} max={10} onChange={setMaxRetries} />
-              <Slider label="Retry delay" value={retryDelay} min={1} max={6} unit="s" onChange={setRetryDelay} />
-              <Slider label="TTL (0 = off)" value={ttlSec} min={0} max={20} unit="s" onChange={setTtlSec} />
-              <Toggle checked={dmqEnabled} onChange={setDmqEnabled} label="Dead Message Queue" />
+              <Slider disabled={demoActive} label="Max retries" value={maxRetries} min={0} max={10} onChange={setMaxRetries} />
+              <Slider disabled={demoActive} label="Retry delay" value={retryDelay} min={1} max={6} unit="s" onChange={setRetryDelay} />
+              <Slider disabled={demoActive} label="TTL (0 = off)" value={ttlSec} min={0} max={20} unit="s" onChange={setTtlSec} />
+              <Toggle disabled={demoActive} checked={dmqEnabled} onChange={setDmqEnabled} label="Dead Message Queue" />
             </ControlGroup>
           </div>
           <div className="control-row">
             <ControlGroup label="Environment">
-              <Toggle checked={dbUp} onChange={setDbUp} label="Database online" />
-              <Toggle checked={!paused} onChange={(v) => setPaused(!v)} label="Consumer running" />
+              <Toggle disabled={demoActive} checked={dbUp} onChange={setDbUp} label="Database online" />
+              <Toggle disabled={demoActive} checked={!paused} onChange={(v) => setPaused(!v)} label="Consumer running" />
             </ControlGroup>
           </div>
           <div className="control-row">
             <ControlGroup label="Guided policy demos">
-              <Btn onClick={demoRetryRecover}>▶ Retry, then recover</Btn>
-              <Btn onClick={demoRetryLimit}>▶ Retry limit → DMQ</Btn>
-              <Btn onClick={demoTtl}>▶ TTL expiry</Btn>
+              <Btn disabled={demoActive} onClick={demoRetryRecover}>▶ Retry, then recover</Btn>
+              <Btn disabled={demoActive} onClick={demoRetryLimit}>▶ Retry limit → DMQ</Btn>
+              <Btn disabled={demoActive} onClick={demoTtl}>▶ TTL expiry</Btn>
             </ControlGroup>
-            <Btn variant="ghost" sm onClick={() => { setQueue([]); setProc(null); setDmq([]); }}>Clear all</Btn>
+            <Btn variant="ghost" sm disabled={demoActive} onClick={() => { setQueue([]); setProc(null); setDmq([]); }}>Clear all</Btn>
           </div>
         </ControlBar>
       </div>

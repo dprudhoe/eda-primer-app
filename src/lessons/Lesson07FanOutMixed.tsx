@@ -25,6 +25,7 @@ type Lane = {
   icon: string;
   accent: Accent;
   pattern: Pattern;
+  protocol: "MQTT" | "AMQP" | "REST" | "SMF";
   desc: string;
   online: boolean;
   received: number; // direct
@@ -39,16 +40,16 @@ const EVENT = "InspectionResult";
 
 const base = { online: true, received: 0, missed: 0, depth: 0, delivered: 0 };
 const INITIAL: Lane[] = [
-  { id: "ops", name: "Operations Dashboard", icon: "◎", accent: "cyan", pattern: "direct", desc: "Live notification", ...base },
-  { id: "hist", name: "Historian", icon: "▥", accent: "green", pattern: "direct", desc: "Streaming copy", ...base },
-  { id: "analytics", name: "Analytics Platform", icon: "▤", accent: "violet", pattern: "direct", desc: "Fan-out copy", ...base },
-  { id: "ai", name: "AI Application", icon: "✦", accent: "amber", pattern: "direct", desc: "Trigger", ...base },
-  { id: "qms", name: "Quality Mgmt System", icon: "✓", accent: "blue", pattern: "queue", desc: "Durable queue", ...base },
-  { id: "maint", name: "Maintenance", icon: "✦", accent: "red", pattern: "queue", desc: "Durable queue", ...base },
-  { id: "rest", name: "REST Endpoint", icon: "⇄", accent: "green", pattern: "http", desc: "HTTP via queue", ...base },
+  { id: "ops", name: "Operations Dashboard", icon: "◎", accent: "cyan", pattern: "direct", protocol: "MQTT", desc: "Live notification", ...base },
+  { id: "hist", name: "Historian", icon: "▥", accent: "green", pattern: "queue", protocol: "SMF", desc: "Durable ingestion", ...base },
+  { id: "analytics", name: "Analytics Platform", icon: "▤", accent: "violet", pattern: "queue", protocol: "AMQP", desc: "Durable analytics", ...base },
+  { id: "ai", name: "AI Trigger", icon: "✦", accent: "amber", pattern: "direct", protocol: "SMF", desc: "Transient trigger", ...base },
+  { id: "qms", name: "Quality Mgmt System", icon: "✓", accent: "blue", pattern: "queue", protocol: "AMQP", desc: "Durable queue", ...base },
+  { id: "maint", name: "Maintenance", icon: "✦", accent: "red", pattern: "queue", protocol: "MQTT", desc: "Durable queue", ...base },
+  { id: "rest", name: "REST Endpoint", icon: "⇄", accent: "green", pattern: "http", protocol: "REST", desc: "HTTP via queue", ...base },
 ];
 
-const QUEUE_TONE: Record<string, "blue" | "red" | "green"> = { qms: "blue", maint: "red", rest: "green" };
+const QUEUE_TONE: Record<string, "blue" | "red" | "green" | "violet"> = { hist: "green", analytics: "violet", qms: "blue", maint: "red", rest: "green" };
 
 export default function Lesson07FanOutMixed() {
   const { flyers, emit, remove } = useFlow();
@@ -157,6 +158,7 @@ export default function Lesson07FanOutMixed() {
                       <div className="node-name" style={{ fontSize: 12 }}>{l.name}</div>
                       <div className="node-role" style={{ marginTop: 0 }}>{metric}</div>
                     </div>
+                    <span className="queue-sub" style={{ fontSize: 8.5 }}>{l.protocol}</span>
                     {!l.online ? <span className="node-badge badge-off" style={{ alignSelf: "center", margin: 0 }}>Offline</span> : null}
                   </div>
                 </Anchored>
@@ -213,10 +215,10 @@ export default function Lesson07FanOutMixed() {
         <Card title="Scenario">
           <div className="prose">
             <p>
-              A single <strong>InspectionResult</strong> event feeds seven consumers. Four take it
-              <strong> live</strong> (dashboard, historian, analytics, AI trigger), two through
-              <strong> durable queues</strong> (QMS, maintenance), and one via a queue-backed
-              <strong> REST</strong> endpoint.
+              A single <strong>InspectionResult</strong> event feeds seven consumers. The operations
+              dashboard and an ephemeral AI trigger take it <strong>live</strong>; the historian,
+              analytics, QMS, and maintenance applications use <strong>durable queues</strong>; the
+              REST endpoint is also queue-backed. MQTT, AMQP, REST, and SMF coexist on one event.
             </p>
           </div>
         </Card>

@@ -19,15 +19,13 @@ import {
 import { useFlow, Pt } from "../components/useFlow";
 
 const CLIENT: Pt = { x: 15, y: 26 };
-const BROKER: Pt = { x: 40, y: 50 };
-const SUB: Pt = { x: 72, y: 24 };
-const QUEUE: Pt = { x: 60, y: 78 };
+const BROKER: Pt = { x: 45, y: 34 };
+const QUEUE: Pt = { x: 62, y: 72 };
 const REST: Pt = { x: 87, y: 78 };
 
 export default function Lesson07Rest() {
   const { flyers, emit, remove } = useFlow();
   const [healthy, setHealthy] = useState(true);
-  const [ingressReceived, setIngressReceived] = useState(0);
   const [depth, setDepth] = useState(0);
   const [delivered, setDelivered] = useState(0);
   const [attempts, setAttempts] = useState(0);
@@ -39,13 +37,10 @@ export default function Lesson07Rest() {
   const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
-  // an HTTP POST publishes to the broker; the broker then fans the event
-  // to its live subscriber AND enqueues a copy for the REST consumer
+  // an HTTP POST publishes to the broker, which enqueues it for REST delivery
   const httpPost = () => {
     emit({ from: CLIENT, to: BROKER, tone: "green", label: "POST /publish", duration: 0.8 });
     later(850, () => {
-      emit({ from: BROKER, to: SUB, tone: "green", label: "InspectionResult", duration: 0.8 });
-      later(850, () => setIngressReceived((n) => n + 1));
       emit({ from: BROKER, to: QUEUE, tone: "green", label: "queued", duration: 0.7 });
       setDepth((d) => d + 1);
     });
@@ -80,14 +75,13 @@ export default function Lesson07Rest() {
         <Stage
           note={
             healthy
-              ? "Top: any HTTP client can POST straight to the broker — no MQTT library required. Bottom: the broker posts each queued message to the REST endpoint and dequeues only after a 2xx response."
+              ? "An HTTP client POSTs to the broker. The message enters a queue, and the broker's REST Delivery Point POSTs it to the endpoint until a 2xx response confirms success."
               : "The REST endpoint is returning 5xx. The broker keeps the message in the queue and retries — nothing is dequeued until it gets a 2xx."
           }
           minHeight={440}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
             <line className="flow-line active" x1={CLIENT.x} y1={CLIENT.y} x2={BROKER.x} y2={BROKER.y} vectorEffect="non-scaling-stroke" />
-            <line className="flow-line active" x1={BROKER.x} y1={BROKER.y} x2={SUB.x} y2={SUB.y} vectorEffect="non-scaling-stroke" />
             <line className="flow-line active" x1={BROKER.x} y1={BROKER.y} x2={QUEUE.x} y2={QUEUE.y} vectorEffect="non-scaling-stroke" />
             <line className={`flow-line ${healthy ? "active" : "dead"}`} x1={QUEUE.x} y1={QUEUE.y} x2={REST.x} y2={REST.y} vectorEffect="non-scaling-stroke" />
           </svg>
@@ -96,10 +90,7 @@ export default function Lesson07Rest() {
             <Node icon="⇄" name="HTTP Client" role="curl / ERP / cloud" accent="cyan" sub="no MQTT needed" />
           </Anchored>
           <Anchored pt={BROKER}>
-            <Broker active={ingressReceived > 0 || depth > 0} />
-          </Anchored>
-          <Anchored pt={SUB}>
-            <Node icon="◎" name="Live Subscriber" role="Consumer" accent="green" sub={`received ${ingressReceived}`} />
+            <Broker active={depth > 0} />
           </Anchored>
 
           <Anchored pt={QUEUE}>
@@ -133,7 +124,7 @@ export default function Lesson07Rest() {
           <div className="control-row">
             <ControlGroup label="Publish (HTTP POST)">
               <Btn variant="primary" onClick={httpPost}>HTTP POST to broker</Btn>
-              <span className="dim" style={{ fontSize: 12 }}>delivers live to the subscriber and enqueues a copy for REST</span>
+              <span className="dim" style={{ fontSize: 12 }}>publishes into the queue used by the REST Delivery Point</span>
             </ControlGroup>
           </div>
           <div className="control-row">
@@ -167,6 +158,7 @@ export default function Lesson07Rest() {
           <div className="prose" style={{ fontSize: 13.5 }}>
             <p><b style={{ color: "var(--green-bright)" }}>Ingress:</b> any system that can make an HTTP POST can publish to the broker — no MQTT client, no SDK. Great for ERPs, cloud functions, and webhooks.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Egress:</b> a queue can push each message to an external REST API, dequeuing only on a 2xx. The broker handles retries and back-pressure.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Policy:</b> because a REST Delivery Point consumes from a queue, it can use retry limits, TTL, and a DMQ just like other guaranteed consumers.</p>
           </div>
         </Card>
 
@@ -182,6 +174,7 @@ export default function Lesson07Rest() {
             "Queues can deliver outbound to a REST endpoint via broker-managed HTTP.",
             "A message is dequeued only on a 2xx response.",
             "Non-2xx responses keep the message queued and retried — no data loss.",
+            "Queue policies such as retry limits, TTL, and DMQ also apply to REST delivery.",
             "REST bridges legacy and cloud systems into the event-driven world.",
           ]}
         />
