@@ -199,49 +199,63 @@ export default function Lesson04Queues() {
 function QueueRow({ q, onConsumer }: { q: Queue; onConsumer: (c: Consumer) => void }) {
   return (
     <div className={`queue-row ${q.flash ? "flash" : ""}`}>
-      <div className="qr-info">
-        <div className="queue-head">
-          <span className="queue-name">{q.name}</span>
-          <span className="queue-depth">{q.msgs.length}</span>
+      <div className="qr-queue">
+        <div className="qr-info">
+          <div className="queue-head">
+            <span className="queue-name">{q.name}</span>
+            <span className="queue-depth">{q.msgs.length}</span>
+          </div>
+          <div className="queue-subs">
+            {q.subs.map((s) => (
+              <span key={s} className="queue-sub">{s}</span>
+            ))}
+          </div>
         </div>
-        <div className="queue-subs">
-          {q.subs.map((s) => (
-            <span key={s} className="queue-sub">{s}</span>
-          ))}
+
+        <div className="qr-msgs">
+          <AnimatePresence initial={false}>
+            {q.msgs.length === 0 ? (
+              <div className="queue-empty" key="empty">empty</div>
+            ) : (
+              q.msgs.map((m) => (
+                <motion.div
+                  key={m.id}
+                  layout
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 36, scale: 0.85 }}
+                  transition={{ duration: 0.26 }}
+                  className="queue-msg"
+                >
+                  <span>{m.topic}</span>
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
         </div>
-        <div className="row" style={{ gap: 6 }}>
+      </div>
+
+      <div className={`queue-consumer-link ${q.consumer === "running" ? "active" : ""}`}>→</div>
+
+      <Node
+        icon="▤"
+        name="Consumer"
+        role={q.consumer === "running" ? "Receiving messages" : "Not attached"}
+        accent={q.consumer === "running" ? "green" : "slate"}
+        lit={q.consumer === "running"}
+        style={{ minWidth: 0, justifyContent: "center" }}
+      >
+        <div className="queue-consumer-controls">
           {q.consumer === "running" ? (
             <Btn sm onClick={() => onConsumer("none")}>Stop consuming</Btn>
           ) : (
             <Btn sm variant="primary" onClick={() => onConsumer("running")}>Start consuming</Btn>
           )}
+          <div className="queue-consumer-status">
+            {q.consumer === "running" ? "messages leave on ack" : "messages accumulate"}
+          </div>
         </div>
-        <div style={{ fontSize: 10.5, color: "var(--text-mute)" }}>
-          {q.consumer === "running" ? "consuming — messages leave on ack" : "no consumer — messages accumulate"}
-        </div>
-      </div>
-
-      <div className="qr-msgs">
-        <AnimatePresence initial={false}>
-          {q.msgs.length === 0 ? (
-            <div className="queue-empty" key="empty">empty</div>
-          ) : (
-            q.msgs.map((m) => (
-              <motion.div
-                key={m.id}
-                layout
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 24, scale: 0.85 }}
-                transition={{ duration: 0.26 }}
-                className="queue-msg"
-              >
-                <span>{m.topic}</span>
-              </motion.div>
-            ))
-          )}
-        </AnimatePresence>
-      </div>
+      </Node>
     </div>
   );
 }
