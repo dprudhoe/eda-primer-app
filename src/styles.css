@@ -281,7 +281,9 @@ select {
   grid-template-columns: minmax(0, 1.75fr) minmax(300px, 0.8fr);
 }
 
-@media (max-width: 1080px) {
+/* Collapse before the sidebar + lesson rail begin squeezing the demo canvas.
+   This is viewport-based, not device-based, so it also applies to narrow desktop windows. */
+@media (max-width: 1360px) {
   .app {
     grid-template-columns: 1fr;
   }
