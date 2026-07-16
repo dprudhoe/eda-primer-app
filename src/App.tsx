@@ -6,6 +6,7 @@ import { Btn } from "./components/kit";
 
 export default function App() {
   const [active, setActive] = useState<string>("intro");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Support deep links + browser back/forward via hash (#lesson-id)
   useEffect(() => {
@@ -20,8 +21,17 @@ export default function App() {
     return () => window.removeEventListener("hashchange", sync);
   }, []);
 
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, []);
+
   const go = (id: string) => {
     setActive(id);
+    setMenuOpen(false);
     window.location.hash = id;
     const main = document.querySelector(".main");
     if (main) main.scrollTop = 0;
@@ -34,7 +44,28 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <button
+        className="mobile-menu-button"
+        type="button"
+        aria-label={menuOpen ? "Close lesson menu" : "Open lesson menu"}
+        aria-expanded={menuOpen}
+        aria-controls="lesson-navigation"
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
+      <button
+        className={`mobile-menu-backdrop ${menuOpen ? "open" : ""}`}
+        type="button"
+        aria-label="Close lesson menu"
+        tabIndex={menuOpen ? 0 : -1}
+        onClick={() => setMenuOpen(false)}
+      />
+
+      <aside id="lesson-navigation" className={`sidebar ${menuOpen ? "open" : ""}`}>
         <div className="sidebar-head">
           <img className="sidebar-logo" src={logoUrl} alt="Solace" />
           <div className="sidebar-kicker">Interactive Primer</div>
