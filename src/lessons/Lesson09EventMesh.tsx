@@ -24,7 +24,8 @@ type Site = {
   accent: Accent;
   pt: Pt;
   pubs: { label: string; topic: string }[];
-  sub: string;
+  subs: string[];
+  consumerLabel: string;
   consumerOnline: boolean;
   received: number;
   inBuffer: number; // held for this site's offline consumer
@@ -33,22 +34,25 @@ type Site = {
 
 const DEFS: Record<SiteId, Omit<Site, "consumerOnline" | "received" | "inBuffer" | "outBuffer">> = {
   factory: {
-    id: "factory", name: "Factory Plant", accent: "green", pt: { x: 20, y: 28 },
+    id: "factory", name: "Factory", accent: "green", pt: { x: 20, y: 28 },
     pubs: [
       { label: "Quality event", topic: "factory/quality/check-failed" },
       { label: "Production event", topic: "factory/production/run-started" },
     ],
-    sub: "factory/production/>",
+    subs: ["factory/production/>", "cloud/ai/>"],
+    consumerLabel: "Production + AI",
   },
   cloud: {
     id: "cloud", name: "Cloud · Azure", accent: "blue", pt: { x: 80, y: 28 },
     pubs: [{ label: "AI recommendation", topic: "cloud/ai/recommendation" }],
-    sub: "factory/quality/>",
+    subs: ["factory/quality/>", "regional/report/>"],
+    consumerLabel: "Quality + reports",
   },
   regional: {
     id: "regional", name: "Regional DC", accent: "cyan", pt: { x: 50, y: 76 },
     pubs: [{ label: "Daily report", topic: "regional/report/daily" }],
-    sub: "factory/production/>",
+    subs: ["factory/production/>"],
+    consumerLabel: "Production",
   },
 };
 
@@ -70,8 +74,6 @@ export default function Lesson09EventMesh() {
     setLit((s) => new Set(s).add(id));
     window.setTimeout(() => setLit((s) => { const n = new Set(s); n.delete(id); return n; }), 500);
   };
-  const active = (sub: string) => sub !== "none";
-
   const publish = (sourceId: SiteId, topic: string) => {
     const cur = sitesRef.current;
     const wan = wanRef.current;
@@ -83,7 +85,7 @@ export default function Lesson09EventMesh() {
     emit({ from: producerPt(src), to: src.pt, tone: "green", label: topic.split("/").slice(-1)[0], duration: 0.55 });
 
     cur.forEach((s) => {
-      if (!active(s.sub) || !topicMatches(s.sub, topic)) return;
+      if (!s.subs.some((sub) => topicMatches(sub, topic))) return;
       if (s.id === sourceId) {
         if (s.consumerOnline) {
           recvDelta[s.id] = (recvDelta[s.id] || 0) + 1;
@@ -150,6 +152,14 @@ export default function Lesson09EventMesh() {
     }, i * 300));
   };
   const anyOut = sites.reduce((a, s) => a + s.outBuffer.length, 0);
+  const bufferedRoutes = sites.flatMap((source) =>
+    sites.flatMap((target) => {
+      const depth = source.outBuffer.filter((item) => item.target === target.id).length;
+      return depth > 0
+        ? [{ key: `${source.id}-${target.id}`, depth, pt: { x: (source.pt.x + target.pt.x) / 2, y: (source.pt.y + target.pt.y) / 2 } }]
+        : [];
+    }),
+  );
 
   return (
     <div className="lesson-layout">
@@ -195,24 +205,29 @@ export default function Lesson09EventMesh() {
               <Anchored pt={producerPt(s)}>
                 <div className="node accent-green" style={{ minWidth: 76, padding: "7px 8px", textAlign: "center" }}>
                   <div className="node-name" style={{ fontSize: 9 }}>Publisher</div>
-                  <div className="node-role">{s.pubs[0].label}</div>
+                  <div className="node-role">{s.name} events</div>
                 </div>
               </Anchored>
               <Anchored pt={s.pt}>
                 <div style={{ textAlign: "center" }}>
                   <Broker small label={s.name} active={lit.has(s.id)} />
                   {s.inBuffer > 0 ? <QueueChip depth={s.inBuffer} label="" cap={3} tone="amber" /> : null}
-                  {s.outBuffer.length > 0 ? <QueueChip depth={s.outBuffer.length} label="" cap={3} tone="amber" /> : null}
                 </div>
               </Anchored>
               <Anchored pt={consumerPt(s)}>
                 <div className={`node accent-${s.accent} ${s.consumerOnline ? "" : "offline"}`} style={{ minWidth: 88, padding: "7px 8px", textAlign: "center" }}>
                   <div className="node-name" style={{ fontSize: 9 }}>Consumer</div>
-                  <span className="queue-sub" style={{ fontSize: 7.5 }}>{s.sub}</span>
+                  <span className="queue-sub" style={{ fontSize: 7.5 }}>{s.consumerLabel}</span>
                   <div className="node-role">received {s.received}</div>
                 </div>
               </Anchored>
             </div>
+          ))}
+
+          {bufferedRoutes.map((route) => (
+            <Anchored pt={route.pt} key={route.key} zIndex={4}>
+              <QueueChip depth={route.depth} label="" cap={3} tone="amber" />
+            </Anchored>
           ))}
 
           <AnimatePresence>
@@ -226,10 +241,10 @@ export default function Lesson09EventMesh() {
 
         <ControlBar>
           <div className="control-row">
-            <ControlGroup label="Publish test event from Factory Plant">
-              {DEFS.factory.pubs.map((p) => (
-                <Btn key={p.topic} onClick={() => publish("factory", p.topic)} title={p.topic}>{p.label}</Btn>
-              ))}
+            <ControlGroup label="Test events">
+              {sites.flatMap((site) => site.pubs.map((p) => (
+                <Btn key={p.topic} onClick={() => publish(site.id, p.topic)} title={`${site.name} · ${p.topic}`}>{p.label}</Btn>
+              )))}
             </ControlGroup>
             <ControlGroup label="WAN link">
               {wanUp ? (
@@ -247,7 +262,7 @@ export default function Lesson09EventMesh() {
           <div className="prose" style={{ fontSize: 13 }}>
             <p><b style={{ color: "var(--green-bright)" }}>Quality:</b> flows from the factory publisher to its local broker, then only to Azure and its interested consumer.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Production:</b> reaches the local factory consumer and the Regional DC consumer.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>WAN outage:</b> disconnect the WAN, publish — messages buffer at the <em>publishing</em> broker; reconnect to flush.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>WAN outage:</b> disconnect the WAN and publish — queued messages appear on the failed path toward each interested remote broker.</p>
           </div>
         </Card>
 

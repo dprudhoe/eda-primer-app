@@ -38,7 +38,7 @@ export default function Lesson02RetainedState() {
   const [running, setRunning] = useState(false);
   const [lastSuppressed, setLastSuppressed] = useState(false);
   const [stats, setStats] = useState({ sampled: 0, published: 0, suppressed: 0 });
-  const [liveHistory, setLiveHistory] = useState<State[]>([]);
+  const [liveValue, setLiveValue] = useState<State | null>(null);
   const [lateConnected, setLateConnected] = useState(false);
   const [lateValue, setLateValue] = useState<State | null>(null);
   const [lateEmpty, setLateEmpty] = useState(false);
@@ -76,7 +76,7 @@ export default function Lesson02RetainedState() {
     later(1240, () => emit({ from: HUB, to: RETAIN, tone, label: formatPressure(state), duration: 0.6 }));
     // live consumer receives the transition (state applied on arrival, once)
     later(1240, () => emit({ from: HUB, to: LIVE, tone, label: formatPressure(state), duration: 1 }));
-    later(2240, () => setLiveHistory((h) => [...h, state]));
+    later(2240, () => setLiveValue(state));
     if (lateConnectedRef.current) {
       later(1240, () => emit({ from: HUB, to: LATE, tone, label: formatPressure(state), duration: 1 }));
       later(2240, () => setLateValue(state));
@@ -125,7 +125,7 @@ export default function Lesson02RetainedState() {
     setRetained(null);
     retainedRef.current = null;
     setLastSuppressed(false);
-    setLiveHistory([]);
+    setLiveValue(null);
     setStats({ sampled: 0, published: 0, suppressed: 0 });
     disconnectLate();
   };
@@ -182,19 +182,15 @@ export default function Lesson02RetainedState() {
           </Anchored>
 
           <Anchored pt={LIVE}>
-            <Node icon="◎" name="Live Monitor" role="Always connected" accent="cyan" badge={{ text: "Sees every change", kind: "ok" }}>
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}>
-                {liveHistory.length === 0 ? (
-                  <span className="dim" style={{ fontSize: 11 }}>waiting…</span>
-                ) : (
-                  liveHistory.map((h, i) => (
-                    <span key={i} className="mono" style={{ fontSize: 10, color: "var(--green-bright)" }}>
-                      {formatPressure(h)}
-                    </span>
-                  ))
-                )}
-              </div>
-            </Node>
+            <Node
+              icon="▦"
+              name="Live Monitor"
+              role="Always connected"
+              accent="cyan"
+              value={liveValue != null ? formatPressure(liveValue) : "—"}
+              sub={liveValue != null ? "current live value" : "waiting…"}
+              badge={{ text: "Connected", kind: "ok" }}
+            />
           </Anchored>
 
           <Anchored pt={LATE}>
