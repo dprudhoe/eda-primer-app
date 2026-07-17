@@ -71,7 +71,7 @@ export default function Lesson02RetainedState() {
     lastPublishedRef.current = state;
     setStats((s) => ({ ...s, published: s.published + 1 }));
     const tone = "green" as const;
-    // PLC sample rises to Ignition; changed values continue to broker and retained slot
+    // PLC sample rises to Ignition; changed values continue to broker and retained value
     later(520, () => emit({ from: EDGE, to: HUB, tone, label: formatPressure(state), duration: 0.7 }));
     later(1240, () => emit({ from: HUB, to: RETAIN, tone, label: formatPressure(state), duration: 0.6 }));
     later(1840, () => {
@@ -99,7 +99,7 @@ export default function Lesson02RetainedState() {
     if (retained != null) {
       setLateEmpty(false);
       const tone = "green" as const;
-      // hop 1: retained slot → broker (the broker replays what it holds)
+      // hop 1: retained value → broker (the broker replays what it holds)
       emit({ from: RETAIN, to: HUB, tone, label: `${formatPressure(retained)} · retained`, duration: 0.7 });
       // hop 2: broker → late consumer (single, deterministic)
       later(700, () => emit({ from: HUB, to: LATE, tone, label: formatPressure(retained), duration: 0.9 }));
@@ -179,7 +179,7 @@ export default function Lesson02RetainedState() {
               }}
             >
               <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-mute)" }}>
-                Retained slot
+                Retained value
               </div>
               <div style={{ marginTop: 6 }}>
                 {retained != null ? <MsgToken label={formatPressure(retained)} /> : <span className="dim" style={{ fontSize: 12 }}>empty</span>}
@@ -206,7 +206,7 @@ export default function Lesson02RetainedState() {
               role="Connects late"
               accent={lateConnected ? "violet" : "slate"}
               value={lateConnected ? lateValue != null ? formatPressure(lateValue) : lateEmpty ? "—" : "…" : "—"}
-              sub={!lateConnected ? "offline" : lateEmpty ? "connected — nothing retained" : lateValue ? "current state only" : "connecting…"}
+              sub={!lateConnected ? "offline" : lateEmpty ? "connected — nothing retained" : lateValue ? "last known value" : "connecting…"}
               badge={lateConnected ? { text: "Connected", kind: "ok" } : { text: "Offline", kind: "off" }}
               offline={!lateConnected}
             />

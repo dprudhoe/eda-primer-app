@@ -130,32 +130,41 @@ export default function Lesson09EventMesh() {
     setWanUp(true);
     wanRef.current = true;
     const cur = sitesRef.current;
-    const recvDelta: Record<string, number> = {};
-    const inDelta: Record<string, number> = {};
-    const emits: { from: Pt; to: Pt; site: SiteId }[] = [];
+    const emits: { from: Pt; to: Pt; source: SiteId; target: SiteId; topic: string; consumerOnline: boolean }[] = [];
     cur.forEach((src) => {
       src.outBuffer.forEach((item) => {
         const target = cur.find((x) => x.id === item.target);
         if (!target) return;
-        if (target.consumerOnline) { recvDelta[target.id] = (recvDelta[target.id] || 0) + 1; }
-        else inDelta[target.id] = (inDelta[target.id] || 0) + 1;
-        emits.push({ from: src.pt, to: target.pt, site: target.id });
+        emits.push({
+          from: src.pt,
+          to: target.pt,
+          source: src.id,
+          target: target.id,
+          topic: item.topic,
+          consumerOnline: target.consumerOnline,
+        });
       });
     });
-    setSites((ss) =>
-      ss.map((s) => {
-        let n = { ...s, outBuffer: [] as { topic: string; target: SiteId }[] };
-        if (recvDelta[s.id]) n = { ...n, received: n.received + recvDelta[s.id] };
-        if (inDelta[s.id]) n = { ...n, inBuffer: n.inBuffer + inDelta[s.id] };
-        return n;
-      }),
-    );
     emits.forEach((e, i) => window.setTimeout(() => {
-      emit({ from: e.from, to: e.to, tone: "green", label: "buffered", duration: 1.0 });
-      const target = cur.find((s) => s.id === e.site);
-      if (target?.consumerOnline) window.setTimeout(() => emit({ from: target.pt, to: consumerPt(target), tone: "green", label: "delivered", duration: 0.55 }), 1020);
-      flash(e.site);
-    }, i * 300));
+      // Remove one message only when it leaves the broker so the route queue visibly drains.
+      setSites((ss) => ss.map((s) => {
+        if (s.id !== e.source) return s;
+        const index = s.outBuffer.findIndex((item) => item.target === e.target && item.topic === e.topic);
+        if (index < 0) return s;
+        return { ...s, outBuffer: [...s.outBuffer.slice(0, index), ...s.outBuffer.slice(index + 1)] };
+      }));
+      emit({ from: e.from, to: e.to, tone: "green", label: e.topic.split("/").slice(-1)[0], duration: 1.0 });
+      window.setTimeout(() => {
+        setSites((ss) => ss.map((s) => s.id === e.target
+          ? e.consumerOnline
+            ? { ...s, received: s.received + 1 }
+            : { ...s, inBuffer: s.inBuffer + 1 }
+          : s));
+        const target = cur.find((s) => s.id === e.target);
+        if (target?.consumerOnline) emit({ from: target.pt, to: consumerPt(target), tone: "green", label: "delivered", duration: 0.55 });
+        flash(e.target);
+      }, 1020);
+    }, i * 650));
   };
   const anyOut = sites.reduce((a, s) => a + s.outBuffer.length, 0);
   const bufferedRoutes = sites.flatMap((source) =>
@@ -174,6 +183,8 @@ export default function Lesson09EventMesh() {
           note={
             !wanUp
               ? `WAN is down. Each broker still serves its local apps; ${anyOut} guaranteed message(s) are buffered at their publishing broker until the link returns.`
+              : anyOut > 0
+                ? `WAN restored. ${anyOut} buffered message(s) are draining from the broker links.`
               : "Every app publishes and subscribes to its local broker. Subscriptions propagate across the mesh, so an event flows broker-to-broker only where a consumer wants it."
           }
           minHeight={540}

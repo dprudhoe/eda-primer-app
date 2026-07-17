@@ -14,7 +14,7 @@ import {
   Stage,
   Toggle,
 } from "../components/kit";
-import { useFlow, Pt } from "../components/useFlow";
+import { useFlow, Pt, Flyer } from "../components/useFlow";
 
 type Kind = "ok" | "perm";
 type Msg = {
@@ -36,26 +36,41 @@ const PROCESS_MS = 900;
 let mId = 1;
 
 export default function Lesson06Reliability() {
-  const { flyers, emit, remove } = useFlow();
+  const { flyers, emit, remove, clear: clearFlyers } = useFlow();
   const [maxRetries, setMaxRetries] = useState(3);
   const [retryDelay, setRetryDelay] = useState(2);
   const [ttlSec, setTtlSec] = useState(0);
   const [dmqEnabled, setDmqEnabled] = useState(true);
-  const [dbUp, setDbUp] = useState(true);
+  const [processingOk, setProcessingOk] = useState(true);
   const [paused, setPaused] = useState(false);
   const [demoActive, setDemoActive] = useState(false);
+  const [processingErrorVisible, setProcessingErrorVisible] = useState(false);
 
   const [queue, setQueue] = useState<Msg[]>([]);
   const [dmq, setDmq] = useState<Dead[]>([]);
   const [proc, setProc] = useState<{ id: number; until: number } | null>(null);
   const [, forceTick] = useState(0);
   const timers = useRef<number[]>([]);
+  const flowGeneration = useRef(0);
+  const completedFlyers = useRef<Set<number>>(new Set());
 
-  const refs = useRef({ maxRetries, retryDelay, ttlSec, dmqEnabled, dbUp, paused, queue, proc });
-  refs.current = { maxRetries, retryDelay, ttlSec, dmqEnabled, dbUp, paused, queue, proc };
+  const refs = useRef({ maxRetries, retryDelay, ttlSec, dmqEnabled, processingOk, paused, queue, proc });
+  refs.current = { maxRetries, retryDelay, ttlSec, dmqEnabled, processingOk, paused, queue, proc };
 
   const laterTimer = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+
+  const finishFlyer = (flyer: Flyer) => {
+    if (completedFlyers.current.has(flyer.id)) return;
+    completedFlyers.current.add(flyer.id);
+    remove(flyer.id);
+    const dead = flyer.meta?.dead as Dead | undefined;
+    if (dead && flyer.meta?.generation === flowGeneration.current) setDmq((d) => [dead, ...d]);
+    if (flyer.meta?.processingError && flyer.meta?.generation === flowGeneration.current) {
+      setProcessingErrorVisible(true);
+      laterTimer(650, () => setProcessingErrorVisible(false));
+    }
+  };
 
   const add = (kind: Kind, label: string) => {
     const now = Date.now();
@@ -83,8 +98,14 @@ export default function Lesson06Reliability() {
       });
       if (expired.length) {
         if (r.dmqEnabled) {
-          setDmq((d) => [...expired.map((m) => ({ id: m.id, label: m.label, reason: "TTL expired" })), ...d]);
-          expired.forEach((m) => emit({ from: QUEUE, to: DMQ, tone: "amber", label: `${m.label} · expired`, duration: 0.8 }));
+          expired.forEach((m) => emit({
+            from: QUEUE,
+            to: DMQ,
+            tone: "amber",
+            label: `${m.label} · expired`,
+            duration: 0.8,
+            meta: { dead: { id: m.id, label: m.label, reason: "TTL expired" } satisfies Dead, generation: flowGeneration.current },
+          }));
         }
         setQueue(q);
         refs.current.queue = q;
@@ -101,23 +122,35 @@ export default function Lesson06Reliability() {
             refs.current.queue = nq;
           };
           if (m.kind === "perm") {
-            // invalid order → reject straight to DMQ (no retries)
+            // malformed BOM update → reject straight to DMQ (no retries)
             finish((qq) => qq.filter((x) => x.id !== m.id));
             if (r.dmqEnabled) {
-              setDmq((d) => [{ id: m.id, label: m.label, reason: "Rejected (invalid product id)" }, ...d]);
-              emit({ from: CONSUMER, to: DMQ, tone: "red", label: `${m.label} · rejected`, duration: 0.8 });
+              emit({
+                from: CONSUMER,
+                to: DMQ,
+                tone: "red",
+                label: `${m.label} · rejected`,
+                duration: 0.8,
+                meta: { dead: { id: m.id, label: m.label, reason: "Rejected (malformed BOM update)" } satisfies Dead, generation: flowGeneration.current },
+              });
             }
-          } else if (r.dbUp) {
-            // valid order + database available → commit, ack, leave queue
+          } else if (r.processingOk) {
+            // valid BOM update processed successfully → commit, ack, leave queue
             finish((qq) => qq.filter((x) => x.id !== m.id));
           } else {
-            // valid order but database down → temporary failure, nack/release for retry
+            // valid BOM update hits a temporary processing error → nack/release for retry
             const deliveries = m.deliveries + 1;
             if (deliveries > r.maxRetries) {
               finish((qq) => qq.filter((x) => x.id !== m.id));
               if (r.dmqEnabled) {
-                setDmq((d) => [{ id: m.id, label: m.label, reason: `Retries exhausted (${deliveries - 1})` }, ...d]);
-                emit({ from: CONSUMER, to: DMQ, tone: "red", label: `${m.label} · max retries`, duration: 0.8 });
+                emit({
+                  from: CONSUMER,
+                  to: DMQ,
+                  tone: "red",
+                  label: `${m.label} · max retries`,
+                  duration: 0.8,
+                  meta: { dead: { id: m.id, label: m.label, reason: `Retries exhausted (${deliveries - 1})` } satisfies Dead, generation: flowGeneration.current },
+                });
               }
             } else {
               finish((qq) =>
@@ -136,9 +169,16 @@ export default function Lesson06Reliability() {
         if (next) {
           setProc({ id: next.id, until: now + PROCESS_MS });
           emit({ from: QUEUE, to: CONSUMER, tone: "green", label: next.label, duration: 0.6 });
-          // only a valid order attempts the database write; an invalid payload never touches it
+          // only a valid BOM update attempts the database write; an invalid payload never touches it
           if (next.kind === "ok") {
-            emit({ from: CONSUMER, to: DB, tone: r.dbUp ? "green" : "red", label: "commit", duration: 0.9 });
+            emit({
+              from: CONSUMER,
+              to: DB,
+              tone: r.processingOk ? "green" : "red",
+              label: "apply update",
+              duration: 0.9,
+              meta: { processingError: !r.processingOk, generation: flowGeneration.current },
+            });
           }
         }
       }
@@ -148,28 +188,38 @@ export default function Lesson06Reliability() {
   }, []);
 
   // self-playing policy demos
-  const beginDemo = (durationMs: number) => {
-    setDemoActive(true);
-    setDmq([]);
+  const clearMessages = () => {
+    flowGeneration.current += 1;
+    completedFlyers.current.clear();
+    clearFlyers();
     setQueue([]);
     setProc(null);
+    setDmq([]);
+    setProcessingErrorVisible(false);
+    refs.current.queue = [];
+    refs.current.proc = null;
+  };
+
+  const beginDemo = (durationMs: number) => {
+    setDemoActive(true);
+    clearMessages();
     laterTimer(durationMs, () => setDemoActive(false));
   };
   const demoRetryRecover = () => {
     beginDemo(8500);
-    setMaxRetries(5); setRetryDelay(2); setTtlSec(0); setDmqEnabled(true); setPaused(false); setDbUp(false);
-    laterTimer(60, () => add("ok", `WO-${1000 + mId}`));
-    laterTimer(5200, () => setDbUp(true)); // database comes back → next retry succeeds
+    setMaxRetries(5); setRetryDelay(2); setTtlSec(0); setDmqEnabled(true); setPaused(false); setProcessingOk(false);
+    laterTimer(60, () => add("ok", `BOM-${1000 + mId}`));
+    laterTimer(5200, () => setProcessingOk(true)); // temporary error clears → next retry succeeds
   };
   const demoRetryLimit = () => {
     beginDemo(12500);
-    setMaxRetries(3); setRetryDelay(2); setTtlSec(0); setDmqEnabled(true); setPaused(false); setDbUp(false);
-    laterTimer(60, () => add("ok", `WO-${1000 + mId}`)); // DB stays down → exhausts retries → DMQ
+    setMaxRetries(3); setRetryDelay(2); setTtlSec(0); setDmqEnabled(true); setPaused(false); setProcessingOk(false);
+    laterTimer(60, () => add("ok", `BOM-${1000 + mId}`)); // DB stays down → exhausts retries → DMQ
   };
   const demoTtl = () => {
     beginDemo(9000);
-    setMaxRetries(5); setRetryDelay(2); setTtlSec(8); setDmqEnabled(true); setPaused(true); setDbUp(true);
-    laterTimer(60, () => add("ok", `WO-${1000 + mId}`)); // paused → TTL counts down → expires
+    setMaxRetries(5); setRetryDelay(2); setTtlSec(8); setDmqEnabled(true); setPaused(true); setProcessingOk(true);
+    laterTimer(60, () => add("ok", `BOM-${1000 + mId}`)); // paused → TTL counts down → expires
   };
 
   const now = Date.now();
@@ -178,19 +228,19 @@ export default function Lesson06Reliability() {
     <div className="lesson-layout">
       <div>
         <Stage
-          note="A valid order needs the database. When the database is down it becomes a temporary failure and retries; an invalid order fails permanently. Whichever limit hits first — max retries, Time to Live (TTL), or a hard rejection — routes the message to the Dead Message Queue."
+          note="A valid BOM update is applied by the MES. A temporary processing error triggers retries; a malformed update fails permanently. Whichever limit hits first — max retries, Time to Live (TTL), or a hard rejection — routes the message to the Dead Message Queue."
           minHeight={420}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
             <line className="flow-line active" x1={QUEUE.x} y1={QUEUE.y} x2={CONSUMER.x} y2={CONSUMER.y} vectorEffect="non-scaling-stroke" />
             <line className={`flow-line ${dmqEnabled ? "dead" : ""}`} x1={CONSUMER.x} y1={CONSUMER.y} x2={DMQ.x} y2={DMQ.y} vectorEffect="non-scaling-stroke" />
-            <line className={`flow-line ${dbUp ? "active" : "dead"}`} x1={CONSUMER.x} y1={CONSUMER.y} x2={DB.x} y2={DB.y} vectorEffect="non-scaling-stroke" />
+            <line className={`flow-line ${processingErrorVisible ? "dead" : "active"}`} x1={CONSUMER.x} y1={CONSUMER.y} x2={DB.x} y2={DB.y} vectorEffect="non-scaling-stroke" />
           </svg>
 
           <Anchored pt={QUEUE}>
             <div className="queue" style={{ minWidth: 186 }}>
               <div className="queue-head">
-                <span className="queue-name">Work Queue</span>
+                <span className="queue-name">BOM Updates</span>
                 <span className="queue-depth">{queue.length}</span>
               </div>
               <div className="queue-slots" style={{ height: 168, overflowY: "auto" }}>
@@ -228,19 +278,20 @@ export default function Lesson06Reliability() {
           <Anchored pt={CONSUMER}>
             <Node
               icon="◉"
-              name="Line Execution System"
+              name="MES"
               role="Consumer"
               accent={paused ? "slate" : proc ? "green" : "cyan"}
               value={proc ? "processing…" : paused ? "paused" : "idle"}
-              sub={dbUp ? "database online" : "database offline"}
+              sub={processingErrorVisible ? "temporary processing error" : "processing ready"}
               lit={!!proc}
               offline={paused}
               badge={paused ? { text: "Paused", kind: "off" } : undefined}
+              style={{ width: 196, height: 148, boxSizing: "border-box" }}
             />
           </Anchored>
 
           <Anchored pt={DB}>
-            <Node icon="▤" name="Database" role="System of record" accent={dbUp ? "green" : "red"} offline={!dbUp} badge={dbUp ? { text: "Online", kind: "ok" } : { text: "Offline", kind: "err" }} />
+            <Node icon="▤" name="MES Database" role="System of record" accent={processingErrorVisible ? "red" : "green"} badge={processingErrorVisible ? { text: "Error", kind: "err" } : { text: "Ready", kind: "ok" }} />
           </Anchored>
 
           <Anchored pt={DMQ}>
@@ -268,7 +319,7 @@ export default function Lesson06Reliability() {
 
           <AnimatePresence>
             {flyers.map((f) => (
-              <Particle key={f.id} from={f.from} to={f.to} duration={f.duration} onDone={() => remove(f.id)}>
+              <Particle key={f.id} from={f.from} to={f.to} duration={f.duration} onDone={() => finishFlyer(f)}>
                 <MsgToken label={f.label} tone={f.tone} />
               </Particle>
             ))}
@@ -277,9 +328,12 @@ export default function Lesson06Reliability() {
 
         <ControlBar>
           <div className="control-row">
-            <ControlGroup label="Publish">
-              <Btn variant="primary" disabled={demoActive} onClick={() => add("ok", `WO-${1000 + mId}`)}>Publish valid work order</Btn>
-              <Btn variant="danger" disabled={demoActive} onClick={() => add("perm", `PAYLOAD-${1000 + mId}·bad`)}>Publish invalid payload</Btn>
+            <ControlGroup label="ERP publisher">
+              <Btn variant="primary" disabled={demoActive} onClick={() => add("ok", `BOM-${1000 + mId}`)}>Publish valid BOM update</Btn>
+              <Btn variant="danger" disabled={demoActive} onClick={() => {
+                setPaused(false);
+                add("perm", `BOM-${1000 + mId}·bad`);
+              }}>Publish invalid payload</Btn>
             </ControlGroup>
           </div>
           <div className="control-row">
@@ -292,7 +346,7 @@ export default function Lesson06Reliability() {
           </div>
           <div className="control-row">
             <ControlGroup label="Environment">
-              <Toggle disabled={demoActive} checked={dbUp} onChange={setDbUp} label="Database online" />
+              <Toggle disabled={demoActive} checked={processingOk} onChange={setProcessingOk} label="Processing succeeds" />
               <Toggle disabled={demoActive} checked={!paused} onChange={(v) => setPaused(!v)} label="Consumer running" />
             </ControlGroup>
           </div>
@@ -302,7 +356,7 @@ export default function Lesson06Reliability() {
               <Btn disabled={demoActive} onClick={demoRetryLimit}>▶ Retry limit → DMQ</Btn>
               <Btn disabled={demoActive} onClick={demoTtl}>▶ TTL expiry</Btn>
             </ControlGroup>
-            <Btn variant="ghost" sm disabled={demoActive} onClick={() => { setQueue([]); setProc(null); setDmq([]); }}>Clear all</Btn>
+            <Btn variant="ghost" sm disabled={demoActive} onClick={clearMessages}>Clear all</Btn>
           </div>
         </ControlBar>
       </div>
@@ -310,8 +364,8 @@ export default function Lesson06Reliability() {
       <div className="rail">
         <Card title="How to read it">
           <div className="prose" style={{ fontSize: 13 }}>
-            <p><b style={{ color: "var(--green-bright)" }}>Valid + DB online</b> → commits and acknowledges.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Valid + DB offline</b> → temporary failure; retries with a delay, then succeeds once the DB is back.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Valid + processing succeeds</b> → applies the update and acknowledges.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Valid + processing error</b> → temporary failure; retries with a delay, then succeeds once processing recovers.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Invalid</b> → permanent failure; rejected straight to the DMQ, no retries.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Time to Live (TTL)</b> → sets how long a queued message remains eligible for delivery. When it expires, the broker removes it from the work queue and routes it to the DMQ when one is configured.</p>
           </div>
