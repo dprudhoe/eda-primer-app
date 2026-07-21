@@ -63,7 +63,7 @@ export default function Intro({
 
       <div className="intro-cta center">
         <Btn variant="primary" onClick={onStart}>
-          Start Lesson 1: Fire and Forget →
+          Start Lesson 1: {LESSONS[0].title} →
         </Btn>
       </div>
 

@@ -1,4 +1,5 @@
 import { ComponentType } from "react";
+import Lesson00 from "./Lesson00EventPatterns";
 import Lesson01 from "./Lesson01FireAndForget";
 import Lesson02 from "./Lesson02RetainedState";
 import Lesson03 from "./Lesson03QoS";
@@ -28,8 +29,16 @@ export const LESSONS: Lesson[] = [
     Component: Lesson01,
   },
   {
-    id: "retained-state",
+    id: "event-patterns",
     index: 2,
+    title: "Current State or Every Event?",
+    short: "What must consumers preserve?",
+    goal: "Understand why some consumers need only the latest value while others must receive and handle every occurrence.",
+    Component: Lesson00,
+  },
+  {
+    id: "retained-state",
+    index: 3,
     title: "Retained State",
     short: "Current truth vs. what happened",
     goal: "Understand the difference between the current state of something and a historical event.",
@@ -37,7 +46,7 @@ export const LESSONS: Lesson[] = [
   },
   {
     id: "qos",
-    index: 3,
+    index: 4,
     title: "MQTT QoS & Business Success",
     short: "Delivery ≠ processing",
     goal: "Understand the difference between successful message transport and successful business processing.",
@@ -45,7 +54,7 @@ export const LESSONS: Lesson[] = [
   },
   {
     id: "queues",
-    index: 4,
+    index: 5,
     title: "Topics, Subscriptions & Durable Queues",
     short: "How queues attract events",
     goal: "Understand that publishers publish to topics, while queues attract messages through subscriptions.",
@@ -53,7 +62,7 @@ export const LESSONS: Lesson[] = [
   },
   {
     id: "competing-consumers",
-    index: 5,
+    index: 6,
     title: "Competing Consumers",
     short: "Parallel vibration analysis",
     goal: "Understand how a single queue distributes work across multiple consumer instances.",
@@ -61,7 +70,7 @@ export const LESSONS: Lesson[] = [
   },
   {
     id: "reliability",
-    index: 6,
+    index: 7,
     title: "Reliability: Retry, TTL & DMQ",
     short: "Handling failed & expired messages",
     goal: "Understand how messaging policies control retries, expiration, and failed-message isolation.",
@@ -69,7 +78,7 @@ export const LESSONS: Lesson[] = [
   },
   {
     id: "rest",
-    index: 7,
+    index: 8,
     title: "REST Messaging",
     short: "HTTP in and out of the broker",
     goal: "Understand how HTTP clients can publish to a broker, and how queues deliver to REST endpoints, dequeuing only on a 2xx response.",
@@ -77,7 +86,7 @@ export const LESSONS: Lesson[] = [
   },
   {
     id: "fan-out",
-    index: 8,
+    index: 9,
     title: "Fan-Out & Mixed Delivery",
     short: "One event, many contracts",
     goal: "Understand how one published event can independently serve many consumers — each with the delivery guarantee it needs.",
@@ -85,7 +94,7 @@ export const LESSONS: Lesson[] = [
   },
   {
     id: "event-mesh",
-    index: 9,
+    index: 10,
     title: "Event Mesh",
     short: "Events across sites & clouds",
     goal: "Understand how events move reliably across plants, data centers, edge environments, and multiple clouds.",

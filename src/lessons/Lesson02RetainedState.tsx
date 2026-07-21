@@ -142,10 +142,10 @@ export default function Lesson02RetainedState() {
         <Stage
           note={
             lastSuppressed
-              ? `Report by Exception suppressed the unchanged ${formatPressure(observed)} sample. The broker still retains the last published pressure.`
+              ? `RBE suppressed unchanged ${formatPressure(observed)}; the retained value is unchanged.`
               : retained
-              ? `The broker is holding one retained value: ${formatPressure(retained)}. Anyone connecting now receives it immediately.`
-              : "No retained value is stored. A consumer connecting now would receive nothing until the next publish."
+              ? `Broker retained ${formatPressure(retained)}; new subscribers receive it immediately.`
+              : "No retained value; new subscribers wait for the next publish."
           }
           minHeight={400}
         >
