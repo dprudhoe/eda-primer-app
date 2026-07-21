@@ -101,7 +101,7 @@ export default function Lesson02RetainedState() {
       const tone = "green" as const;
       // hop 1: retained value → broker (the broker replays what it holds)
       emit({ from: RETAIN, to: HUB, tone, label: `${formatPressure(retained)} · retained`, duration: 0.7 });
-      // hop 2: broker → late consumer (single, deterministic)
+      // hop 2: broker → late-joining dashboard (single, deterministic)
       later(700, () => emit({ from: HUB, to: LATE, tone, label: formatPressure(retained), duration: 0.9 }));
       later(1650, () => setLateValue(retained));
     } else {
@@ -189,12 +189,12 @@ export default function Lesson02RetainedState() {
 
           <Anchored pt={LIVE}>
             <Node
-              icon="▦"
-              name="Live Monitor"
-              role="Always connected"
+              icon="▥"
+              name="Historian"
+              role="Records every change"
               accent="cyan"
               value={liveValue != null ? formatPressure(liveValue) : "—"}
-              sub={liveValue != null ? "current live value" : "waiting…"}
+              sub={liveValue != null ? "latest recorded value" : "waiting…"}
               badge={{ text: "Connected", kind: "ok" }}
             />
           </Anchored>
@@ -202,7 +202,7 @@ export default function Lesson02RetainedState() {
           <Anchored pt={LATE}>
             <Node
               icon="▦"
-              name="Late Dashboard"
+              name="Operations Dashboard"
               role="Connects late"
               accent={lateConnected ? "violet" : "slate"}
               value={lateConnected ? lateValue != null ? formatPressure(lateValue) : lateEmpty ? "—" : "…" : "—"}
@@ -237,11 +237,11 @@ export default function Lesson02RetainedState() {
             <ControlGroup label="Publisher behavior">
               <Toggle checked={rbe} onChange={setRbe} label="Report by exception" />
             </ControlGroup>
-            <ControlGroup label="Late consumer">
+            <ControlGroup label="Dashboard">
               {lateConnected ? (
                 <Btn onClick={disconnectLate}>Disconnect</Btn>
               ) : (
-                <Btn onClick={connectLate}>Connect late consumer</Btn>
+                <Btn onClick={connectLate}>Connect dashboard</Btn>
               )}
             </ControlGroup>
             <Btn variant="ghost" sm onClick={reset}>Reset</Btn>
@@ -282,9 +282,9 @@ export default function Lesson02RetainedState() {
               bandwidth efficiency with immediate state recovery.
             </p>
             <p>
-              The <strong>Live Monitor</strong> is always connected, so it witnesses every
-              transition. The <strong>Late Dashboard</strong> connects afterwards and receives only
-              the retained value.
+              The <strong>Historian</strong> is continuously connected and records every published
+              transition. The <strong>Operations Dashboard</strong> connects afterwards and receives
+              only the retained last-known value.
             </p>
           </div>
         </Card>

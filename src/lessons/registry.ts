@@ -55,7 +55,7 @@ export const LESSONS: Lesson[] = [
     id: "competing-consumers",
     index: 5,
     title: "Competing Consumers",
-    short: "Distributing inspection load",
+    short: "Parallel vibration analysis",
     goal: "Understand how a single queue distributes work across multiple consumer instances.",
     Component: Lesson05,
   },

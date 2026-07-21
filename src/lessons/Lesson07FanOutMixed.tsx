@@ -50,30 +50,42 @@ const INITIAL: Lane[] = [
 ];
 
 const QUEUE_TONE: Record<string, "blue" | "red" | "green" | "violet"> = { hist: "green", analytics: "violet", ai: "violet", qms: "blue", rest: "green" };
+const DRAIN_RATE: Record<string, number> = { hist: 4, analytics: 2, qms: 2, rest: 1 };
 
 export default function Lesson07FanOutMixed() {
   const { flyers, emit, remove } = useFlow();
   const [lanes, setLanes] = useState<Lane[]>(INITIAL);
   const [pubCount, setPubCount] = useState(0);
   const lanesRef = useRef(lanes);
+  const drainTick = useRef(0);
   lanesRef.current = lanes;
 
   const laneY = (i: number) => 8 + i * (84 / (INITIAL.length - 1));
   const queuePt = (i: number): Pt => ({ x: 64, y: laneY(i) });
   const cardPt = (i: number): Pt => ({ x: 84, y: laneY(i) });
 
-  // drain durable queues (queue + http) whenever their app is online
+  // Each queued consumer drains independently at its own processing rate.
   useEffect(() => {
     const iv = window.setInterval(() => {
-      setLanes((ls) =>
-        ls.map((l) =>
-          l.id !== "ai" && (l.pattern === "queue" || l.pattern === "http") && l.online && l.depth > 0
-            ? { ...l, depth: l.depth - 1, delivered: l.delivered + 1 }
-            : l,
-        ),
-      );
-    }, 1200);
+      drainTick.current += 1;
+      const draining = new Set<string>();
+      lanesRef.current.forEach((lane, i) => {
+        const rate = DRAIN_RATE[lane.id];
+        if (!rate || !lane.online || lane.depth <= 0) return;
+        const everyTicks = 4 / rate;
+        if (drainTick.current % everyTicks !== 0) return;
+        draining.add(lane.id);
+        emit({ from: queuePt(i), to: cardPt(i), tone: "green", label: "delivered", duration: 0.22 });
+      });
+      if (draining.size) {
+        setLanes((ls) => ls.map((lane) => draining.has(lane.id)
+          ? { ...lane, depth: Math.max(0, lane.depth - 1), delivered: lane.delivered + 1 }
+          : lane));
+      }
+    }, 250);
     return () => window.clearInterval(iv);
+    // lane coordinates and emit are stable for the lifetime of this lesson
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const publish = () => {
@@ -183,7 +195,9 @@ export default function Lesson07FanOutMixed() {
                       <div className="node-name" style={{ fontSize: 12 }}>{l.name}</div>
                       <div className="node-role" style={{ marginTop: 0 }}>{metric}</div>
                     </div>
-                    <span className="queue-sub" style={{ fontSize: 8.5 }}>{l.protocol}</span>
+                    <span className="queue-sub" style={{ fontSize: 8.5 }}>
+                      {l.protocol}{DRAIN_RATE[l.id] ? ` · ${DRAIN_RATE[l.id]}/s` : ""}
+                    </span>
                     {!l.online ? <span className="node-badge badge-off" style={{ alignSelf: "center", margin: 0 }}>Offline</span> : null}
                   </div>
                 </Anchored>

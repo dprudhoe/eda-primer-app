@@ -17,20 +17,26 @@ import {
 } from "../components/kit";
 import { useFlow, Pt } from "../components/useFlow";
 
-type WOMsg = { id: number; label: string };
+type AnalysisMsg = { id: number; label: string };
 type Worker = {
   id: number;
   name: string;
   speedMs: number;
   paused: boolean;
-  busy: WOMsg | null;
+  busy: AnalysisMsg | null;
   busyStart: number;
   processed: number;
 };
 
 const QUEUE: Pt = { x: 17, y: 50 };
-let woId = 1;
+let windowId = 1;
 let wkId = 1;
+const ASSETS = ["PUMP-07", "MOTOR-12", "FAN-03", "COMP-02"];
+
+function makeWindow(): AnalysisMsg {
+  const id = windowId++;
+  return { id, label: `${ASSETS[(id - 1) % ASSETS.length]} · W${String(id).padStart(2, "0")}` };
+}
 
 function makeWorker(name: string, speedMs: number): Worker {
   return { id: wkId++, name, speedMs, paused: false, busy: null, busyStart: 0, processed: 0 };
@@ -43,13 +49,13 @@ function workerPt(i: number, n: number): Pt {
 
 export default function Lesson05CompetingConsumers() {
   const { flyers, emit, remove } = useFlow();
-  const [queue, setQueue] = useState<WOMsg[]>(() =>
-    Array.from({ length: 12 }, () => ({ id: woId++, label: `PART-${1000 + woId}` })),
+  const [queue, setQueue] = useState<AnalysisMsg[]>(() =>
+    Array.from({ length: 12 }, makeWindow),
   );
   const [workers, setWorkers] = useState<Worker[]>(() => [
-    makeWorker("Inspector A", 1200),
-    makeWorker("Inspector B", 1200),
-    makeWorker("Inspector C", 1600),
+    makeWorker("Analyzer A", 1200),
+    makeWorker("Analyzer B", 1200),
+    makeWorker("Analyzer C", 1600),
   ]);
 
   const queueRef = useRef(queue);
@@ -93,11 +99,11 @@ export default function Lesson05CompetingConsumers() {
   const publish = (count: number) => {
     setQueue((q) => [
       ...q,
-      ...Array.from({ length: count }, () => ({ id: woId++, label: `PART-${1000 + woId}` })),
+      ...Array.from({ length: count }, makeWindow),
     ]);
   };
 
-  const addWorker = () => setWorkers((ws) => (ws.length >= 3 ? ws : [...ws, makeWorker(`Inspector ${String.fromCharCode(65 + ws.length)}`, 1300)]));
+  const addWorker = () => setWorkers((ws) => (ws.length >= 3 ? ws : [...ws, makeWorker(`Analyzer ${String.fromCharCode(65 + ws.length)}`, 1300)]));
   const removeWorker = () => setWorkers((ws) => ws.slice(0, -1));
   const togglePause = (id: number) => setWorkers((ws) => ws.map((w) => (w.id === id ? { ...w, paused: !w.paused } : w)));
   const setSpeed = (id: number, speedMs: number) => setWorkers((ws) => ws.map((w) => (w.id === id ? { ...w, speedMs } : w)));
@@ -109,7 +115,7 @@ export default function Lesson05CompetingConsumers() {
     <div className="lesson-layout">
       <div>
         <Stage
-          note="Each part is delivered to exactly one inspector. Faster inspectors naturally take a bigger share — the queue levels the load across the pool."
+          note="Each vibration window is delivered to exactly one analyzer. Faster analyzers naturally take a bigger share — the queue levels compute-intensive work across the pool."
           minHeight={520}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -130,9 +136,9 @@ export default function Lesson05CompetingConsumers() {
           </svg>
 
           <Anchored pt={QUEUE}>
-            <div className="queue" style={{ minWidth: 178 }}>
+            <div className="queue" style={{ minWidth: 210 }}>
               <div className="queue-head">
-                <span className="queue-name">Inspection Queue</span>
+                <span className="queue-name">Vibration Analysis Queue</span>
                 <span className="queue-depth">{queue.length}</span>
               </div>
               <div className="queue-slots" style={{ maxHeight: 150, overflow: "hidden" }}>
@@ -155,15 +161,15 @@ export default function Lesson05CompetingConsumers() {
           {workers.map((w, i) => (
             <Anchored pt={workerPt(i, n)} key={w.id}>
               <Node
-                icon="◈"
+                icon="∿"
                 name={w.name}
-                role={`${(3600 / w.speedMs).toFixed(1)} parts/min`}
+                role={`${(w.speedMs / 1000).toFixed(1)} s/window`}
                 accent={w.paused ? "slate" : w.busy ? "green" : "cyan"}
                 value={w.busy ? w.busy.label : w.paused ? "paused" : "idle"}
-                sub={`inspected ${w.processed}`}
+                sub={`analyzed ${w.processed}`}
                 lit={!!w.busy && !w.paused}
                 offline={w.paused}
-                badge={w.paused ? { text: "Paused", kind: "off" } : w.busy ? { text: "Inspecting", kind: "ok" } : undefined}
+                badge={w.paused ? { text: "Paused", kind: "off" } : w.busy ? { text: "Analyzing", kind: "ok" } : undefined}
               />
             </Anchored>
           ))}
@@ -179,22 +185,22 @@ export default function Lesson05CompetingConsumers() {
 
         <ControlBar>
           <div className="control-row">
-            <ControlGroup label="Feed parts">
+            <ControlGroup label="Publish vibration windows">
               <Btn variant="primary" onClick={() => publish(1)}>
-                Add 1 part
+                Add 1 window
               </Btn>
-              <Btn onClick={() => publish(10)}>Add batch of 10</Btn>
-              <Btn onClick={() => publish(20)}>Add batch of 20</Btn>
+              <Btn onClick={() => publish(10)}>Add burst of 10</Btn>
+              <Btn onClick={() => publish(20)}>Add burst of 20</Btn>
             </ControlGroup>
-            <ControlGroup label="Inspectors (0–3)">
+            <ControlGroup label="Analyzers (0–3)">
               <Btn onClick={addWorker} disabled={n >= 3}>
-                + Add inspector
+                + Add analyzer
               </Btn>
               <Btn onClick={removeWorker} disabled={n <= 0}>
-                – Remove inspector
+                – Remove analyzer
               </Btn>
             </ControlGroup>
-            <StatPill label="Total inspected" value={totalProcessed} tone="green" />
+            <StatPill label="Total analyzed" value={totalProcessed} tone="green" />
           </div>
           <div className="control-row">
             <div className="inspector-speed-grid">
@@ -211,15 +217,15 @@ export default function Lesson05CompetingConsumers() {
 
       <div className="rail">
         <Prediction
-          question="A backlog of parts waits in one inspection queue with three inspectors attached. Does every inspector inspect every part?"
+          question="A backlog of vibration windows waits in one queue with three analyzers attached. Does every analyzer process every window?"
           choices={[
-            { id: "a", text: "Yes — each inspector processes all of them" },
-            { id: "b", text: "No — each part goes to one inspector; work is divided", correct: true },
+            { id: "a", text: "Yes — every analyzer processes every window" },
+            { id: "b", text: "No — each window goes to one analyzer; work is divided", correct: true },
           ]}
           reveal={
             <>
-              <b>Work is divided.</b> Consumers on the <em>same queue</em> compete: each part is
-              delivered to exactly one inspector. Add inspectors to raise throughput, or pause one —
+              <b>Work is divided.</b> Consumers on the <em>same queue</em> compete: each window is
+              delivered to exactly one analyzer. Add analyzers to raise throughput, or pause one —
               the others simply pick up the slack.
             </>
           }
@@ -228,13 +234,13 @@ export default function Lesson05CompetingConsumers() {
         <Card title="Scenario">
           <div className="prose">
             <p>
-              A vision system photographs parts coming off the line and queues each image for
-              defect analysis. An <strong>Inspection Queue</strong> holds the backlog while a pool
-              of <strong>inspection workers</strong> consumes from it.
+              A condition-monitoring gateway publishes short vibration windows from pumps, motors,
+              fans, and compressors. A <strong>Vibration Analysis Queue</strong> holds the backlog
+              while a pool of <strong>analysis workers</strong> performs FFT and anomaly scoring.
             </p>
             <p>
-              Feed a batch and watch the inspectors pull different parts. Pause one — the rest keep
-              going. Speed one up — it grabs a larger share.
+              Publish a burst and watch the analyzers pull different windows. Pause one — the rest
+              keep going. Speed one up — it grabs a larger share.
             </p>
           </div>
         </Card>
@@ -242,8 +248,9 @@ export default function Lesson05CompetingConsumers() {
         <InsightCard
           items={[
             "Consumers on the same queue compete for messages.",
-            "Each queued part is inspected by exactly one worker.",
-            "Adding inspectors increases throughput without changing the publisher.",
+            "Each vibration window is analyzed by exactly one worker.",
+            "Independent windows can be processed in parallel when strict ordering is not required.",
+            "Adding analyzers increases throughput without changing the publisher.",
             "The queue provides load leveling and workload distribution.",
           ]}
         />

@@ -59,6 +59,7 @@ export default function Lesson07Rest() {
         if (ok) {
           setDepth((d) => Math.max(0, d - 1)); // 2xx → dequeue
           setDelivered((n) => n + 1);
+          setAttempts(0); // retry count belongs to the current message
         } else {
           setAttempts((n) => n + 1); // non-2xx → message stays, will retry
         }
