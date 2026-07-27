@@ -377,11 +377,24 @@ export default function Lesson10Ecosystem() {
               onDelivered: () => {
                 if (Math.random() >= 1 / 3) return;
                 hop(500, ANALYTICS, A, "MaintenanceRequired", "amber");
-                later(1280, () => enqueue("cmmsRdp", {
-                  to: CMMS,
-                  label: "HTTP POST",
-                  tone: "amber",
-                }));
+                later(1280, () => {
+                  enqueue("cmmsRdp", {
+                    to: CMMS,
+                    label: "HTTP POST",
+                    tone: "amber",
+                  });
+                  sendAcross("fa", {
+                    from: A,
+                    to: F,
+                    label: "MaintenanceRequired",
+                    tone: "amber",
+                    onArrive: () => enqueue("orders", {
+                      to: MES,
+                      label: "maintenance",
+                      tone: "amber",
+                    }),
+                  });
+                });
               },
             });
             sendAcross("fa", {
@@ -567,7 +580,7 @@ export default function Lesson10Ecosystem() {
               </div>
               <div>
                 <b>4. Predictive maintenance</b>
-                <p>When Cloud Analytics determines that inspection results require equipment maintenance, it raises <code>MaintenanceRequired</code>. The CMMS REST queue holds those events while CMMS is offline and drains after reconnection.</p>
+                <p>When Cloud Analytics determines that inspection results require equipment maintenance, it raises <code>MaintenanceRequired</code> for both CMMS and MES. Their queues hold those events while either application—or the Factory–AWS path—is unavailable.</p>
               </div>
               <div>
                 <b>5. Cross-region delivery</b>
@@ -581,12 +594,12 @@ export default function Lesson10Ecosystem() {
       <div className="ecosystem-summary">
         <InsightCard
           items={[
-            "Direct live delivery and retained current state",
-            "Durable queues, competing consumers, retry, TTL and DMQ",
-            "Event reuse across MQTT, AMQP, SMF and REST",
-            "Applications can consume an event, act, and publish the next event or command",
-            "REST ingress and queue-backed outbound delivery",
-            "Three local brokers connected as a full event mesh",
+            "Connected operations emerge when applications collaborate through well-defined, reusable event contracts rather than point-to-point integrations.",
+            "Producers describe what happened without knowing which applications will react, keeping systems loosely coupled and independently evolvable.",
+            "One event contract can support several operational outcomes today and entirely new consumers later without changing the source application.",
+            "Applications can consume an event, act, and publish the next event or command—creating distributed workflows across OT, enterprise, and cloud systems.",
+            "Each consumer can choose live, retained, or guaranteed delivery according to its own outcome without imposing that choice on every other consumer.",
+            "An event mesh extends the same contracts across locations while each application continues to connect only to its local broker.",
           ]}
         />
       </div>
