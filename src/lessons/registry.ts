@@ -9,6 +9,7 @@ import Lesson06 from "./Lesson06Reliability";
 import Lesson07 from "./Lesson07Rest";
 import Lesson08 from "./Lesson07FanOutMixed";
 import Lesson09 from "./Lesson09EventMesh";
+import Lesson10 from "./Lesson10Ecosystem";
 
 export type Lesson = {
   id: string;
@@ -99,5 +100,13 @@ export const LESSONS: Lesson[] = [
     short: "Events across sites & clouds",
     goal: "Understand how events move reliably across plants, data centers, edge environments, and multiple clouds.",
     Component: Lesson09,
+  },
+  {
+    id: "ecosystem",
+    index: 11,
+    title: "The Manufacturing Ecosystem",
+    short: "All patterns in one system",
+    goal: "Explore how direct delivery, retained state, queues, REST, fan-out, reliability, and an event mesh coexist in one manufacturing architecture.",
+    Component: Lesson10,
   },
 ];

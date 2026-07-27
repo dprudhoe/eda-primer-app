@@ -103,7 +103,7 @@ export default function App() {
         {active === "intro" || !lesson ? (
           <Intro onStart={() => go(LESSONS[0].id)} onGo={go} />
         ) : (
-          <div className="lesson">
+          <div className={`lesson ${lesson.id === "ecosystem" ? "ecosystem-lesson" : ""}`}>
             <header className="lesson-header">
               <div className="lesson-kicker">Lesson {lesson.index}</div>
               <h1 className="lesson-title">{lesson.title}</h1>
