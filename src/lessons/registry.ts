@@ -106,7 +106,7 @@ export const LESSONS: Lesson[] = [
     index: 11,
     title: "The Manufacturing Ecosystem",
     short: "All patterns in one system",
-    goal: "Explore how direct delivery, retained state, queues, REST, fan-out, reliability, and an event mesh coexist in one manufacturing architecture.",
+    goal: "Explore connected operations across factory, HQ, and cloud as applications consume events, act, and publish the next step in coordinated manufacturing workflows.",
     Component: Lesson10,
   },
 ];

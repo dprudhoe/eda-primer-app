@@ -810,7 +810,14 @@ select {
 .dmq-marker b { color: var(--red); font-size: 10px; }
 .dmq-marker span { color: var(--text-mute); font-size: 8px; }
 .ecosystem-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.ecosystem-controls { align-items: center; }
+.ecosystem-summary > :only-child { grid-column: 1 / -1; }
+.ecosystem-controls {
+  align-items: stretch;
+}
+.ecosystem-controls > .control-group,
+.ecosystem-controls > .workflow-guide {
+  width: 100%;
+}
 .ecosystem-instructions {
   width: 100%;
   color: var(--text-dim);
@@ -822,6 +829,36 @@ select {
 }
 .ecosystem-instructions b {
   color: var(--text);
+}
+.workflow-guide .card-head {
+  padding: 11px 13px;
+}
+.workflow-guide .card-body {
+  padding: 12px 13px;
+}
+.workflow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.workflow-list > div {
+  padding-left: 10px;
+  border-left: 2px solid var(--line-strong);
+}
+.workflow-list b {
+  color: var(--text);
+  font-size: 12px;
+}
+.workflow-list p {
+  margin-top: 3px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.workflow-list code {
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
 }
 
 
@@ -2378,22 +2415,18 @@ select.select-input {
     align-items: start;
     min-width: 0;
   }
-  .ecosystem-layout > .ecosystem-intro {
-    grid-column: 1 / -1;
-    grid-row: 1;
-  }
   .ecosystem-layout > .stage-card {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
   }
   .ecosystem-layout > .controls {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     margin-top: 0;
   }
   .ecosystem-layout > .ecosystem-summary {
     grid-column: 1 / -1;
-    grid-row: 3;
+    grid-row: 2;
   }
   .ecosystem-layout .ecosystem-instructions {
     min-width: 0;
