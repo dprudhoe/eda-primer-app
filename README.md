@@ -28,14 +28,16 @@ npm run preview  # serve the production build
 |---|--------|---------|
 | — | Why EDA? | Landing page: "not all messages are equal" |
 | 1 | Fire and Forget | Best-effort telemetry (PLC → Ignition Edge → broker); nothing stored for absent consumers |
-| 2 | Retained State | Current state ("what is true now?") vs. events ("what happened?") |
-| 3 | MQTT QoS & Business Success | QoS 1 holds/redelivers to an offline consumer, but transport ack ≠ committed business processing |
-| 4 | Topics, Subscriptions & Durable Queues | Publishers publish to topics; queues attract via subscriptions (`*`, `>` wildcards) |
-| 5 | Competing Consumers | One vision-inspection queue distributes parts across inspector instances |
-| 6 | Reliability: Retry, TTL & DMQ | Retry, TTL countdown, and dead-message isolation policies |
-| 7 | REST Messaging | HTTP POST publishes to the broker; queues deliver to a REST endpoint, dequeuing only on 2xx |
-| 8 | Fan-Out & Mixed Delivery | One event, many consumers — direct / durable-queue / queue-backed HTTP contracts coexisting |
-| 9 | Event Mesh | Multi-broker mesh, subscription propagation, WAN + consumer-outage store-and-forward |
+| 2 | Current State or Every Event? | Whether a consumer needs the latest value or every occurrence |
+| 3 | Retained State | Current state ("what is true now?") vs. events ("what happened?") |
+| 4 | MQTT QoS & Business Success | QoS 1 holds/redelivers to an offline consumer, but transport ack ≠ committed business processing |
+| 5 | Topics, Subscriptions & Durable Queues | Publishers publish to topics; queues attract via subscriptions (`*`, `>` wildcards) |
+| 6 | Competing Consumers | One vibration-analysis queue distributes independent windows across analyzer instances |
+| 7 | Reliability: Retry, TTL & DMQ | Retry, TTL countdown, and dead-message isolation policies |
+| 8 | REST Messaging | HTTP POST publishes to the broker; queues deliver to a REST endpoint, dequeuing only on 2xx |
+| 9 | Event Reuse & Mixed Delivery | One event, many consumers — direct / durable-queue / queue-backed HTTP contracts coexisting |
+| 10 | Event Mesh | Multi-broker mesh, subscription propagation, WAN + consumer-outage store-and-forward |
+| 11 | The Manufacturing Ecosystem | All messaging patterns operating together across factory, HQ, and AWS |
 
 Each lesson follows the same shape: an animated **stage**, a **controls** panel, a
 **"Predict First"** prompt, the **scenario**, and a **"What you learn"** summary.

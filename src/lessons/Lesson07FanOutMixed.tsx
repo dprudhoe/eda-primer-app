@@ -137,7 +137,7 @@ export default function Lesson07FanOutMixed() {
   const toggleOnline = (id: string) => setLanes((ls) => ls.map((l) => (l.id === id ? { ...l, online: !l.online } : l)));
 
   return (
-    <div className="lesson-layout">
+    <div className="lesson-layout fanout-lesson">
       <div>
         <Stage
           note="A camera publishes a frame to Solace. The broker queues it for the AI trigger; after inference, AI publishes InspectionResult back to Solace, which fans the result out to every interested consumer."
@@ -170,7 +170,13 @@ export default function Lesson07FanOutMixed() {
           </svg>
 
           <Anchored pt={CAMERA}>
-            <Node icon="◉" name="Camera" role="Inspection feed" accent="cyan" style={{ width: 76, minWidth: 76, padding: "7px" }} />
+            <Node
+              icon="◉"
+              name="Camera"
+              role="Inspection feed"
+              accent="cyan"
+              style={{ width: 150, minWidth: 150, padding: "9px 10px" }}
+            />
           </Anchored>
           <Anchored pt={HUB}>
             <Broker small active={pubCount > 0} />
@@ -189,7 +195,7 @@ export default function Lesson07FanOutMixed() {
                   </Anchored>
                 ) : null}
                 <Anchored pt={cardPt(i)}>
-                  <div className={`node accent-${l.accent}`} style={{ width: 164, minWidth: 164, padding: "8px 9px", opacity: !l.online ? 0.55 : 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <div className={`node accent-${l.accent}`} style={{ width: 194, minWidth: 194, padding: "9px 10px", opacity: !l.online ? 0.55 : 1, flexDirection: "row", alignItems: "center", gap: 9 }}>
                     <div className="node-icon" style={{ width: 28, height: 28, fontSize: 14 }}>{l.icon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="node-name" style={{ fontSize: 12 }}>{l.name}</div>

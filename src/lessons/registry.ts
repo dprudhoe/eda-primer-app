@@ -88,7 +88,7 @@ export const LESSONS: Lesson[] = [
   {
     id: "fan-out",
     index: 9,
-    title: "Fan-Out & Mixed Delivery",
+    title: "Event Reuse & Mixed Delivery",
     short: "One event, many contracts",
     goal: "Understand how one published event can independently serve many consumers — each with the delivery guarantee it needs.",
     Component: Lesson08,

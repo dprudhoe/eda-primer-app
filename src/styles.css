@@ -17,17 +17,17 @@
   --ink-2: #004668;
   --ink-3: #00324c;
 
-  --panel: rgba(0, 70, 104, 0.82);
-  --panel-2: rgba(255, 255, 255, 0.055);
-  --panel-solid: #004668;
-  --line: rgba(0, 200, 149, 0.24);
-  --line-soft: rgba(195, 213, 222, 0.14);
+  --panel: #ffffff;
+  --panel-2: #f6f9fc;
+  --panel-solid: #ffffff;
+  --line: rgba(32, 38, 42, 0.14);
+  --line-soft: rgba(32, 38, 42, 0.09);
   --line-strong: rgba(0, 200, 149, 0.48);
 
-  --text: #f4f8fb;
-  --text-dim: #c3d5de;
-  --text-mute: rgba(195, 213, 222, 0.76);
-  --white: #ffffff;
+  --text: #20262a;
+  --text-dim: #3f4955;
+  --text-mute: #647481;
+  --white: #20262a;
 
   --amber: #f4b740;
   --red: #ff867b;
@@ -59,7 +59,9 @@ body,
 }
 
 body {
-  background: linear-gradient(180deg, var(--ink-2) 0%, var(--ink-3) 48%, var(--ink) 100%);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(0, 200, 149, 0.06), transparent 24%),
+    linear-gradient(180deg, #ffffff 0%, #f6f9fc 100%);
   background-attachment: fixed;
 }
 
@@ -107,7 +109,7 @@ select {
 
 .sidebar {
   border-right: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(0, 70, 104, 0.97), rgba(0, 41, 62, 0.99));
+  background: rgba(255, 255, 255, 0.97);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -238,9 +240,9 @@ select {
 }
 
 .lesson {
-  max-width: 1240px;
+  max-width: 1460px;
   margin: 0 auto;
-  padding: 32px 40px 80px;
+  padding: 32px 32px 80px;
 }
 
 /* Lesson 11 uses a taller triangular canvas rather than horizontal overflow. */
@@ -264,13 +266,14 @@ select {
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--green-bright);
+  color: var(--green);
 }
 
 .lesson-title {
   margin-top: 8px;
   font-size: 30px;
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-weight: 600;
   color: var(--white);
   letter-spacing: -0.01em;
 }
@@ -286,12 +289,22 @@ select {
 /* Layout: stage on left/top, info rail on right */
 .lesson-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.95fr);
+  grid-template-columns: minmax(0, 1.8fr) minmax(320px, 0.8fr);
   gap: 20px;
   align-items: start;
 }
 .lesson-layout.lesson4-layout {
   grid-template-columns: minmax(0, 1.75fr) minmax(300px, 0.8fr);
+}
+
+/* A narrow pale frame bridges the white editorial page and blue simulation canvas. */
+.lesson-layout > :first-child,
+.ecosystem-layout {
+  position: relative;
+  padding: 12px;
+  border: 1px solid #dce9ee;
+  border-radius: 16px;
+  background: #eef6f8;
 }
 
 /* Collapse before the sidebar + lesson rail begin squeezing the demo canvas.
@@ -329,15 +342,15 @@ select {
     padding: 0;
     border: 1px solid var(--line-strong);
     border-radius: 10px;
-    background: rgba(0, 41, 62, 0.96);
-    box-shadow: 0 8px 24px rgba(6, 20, 35, 0.4);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 8px 24px rgba(32, 38, 42, 0.14);
     cursor: pointer;
   }
   .mobile-menu-button span {
     width: 19px;
     height: 2px;
     border-radius: 999px;
-    background: var(--green-bright);
+    background: var(--green);
   }
   .mobile-menu-backdrop {
     position: fixed;
@@ -401,7 +414,7 @@ select {
   border: 1px solid var(--line);
   background: var(--panel);
   border-radius: var(--radius);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 12px 30px rgba(32, 38, 42, 0.08);
 }
 
 .card-head {
@@ -495,12 +508,22 @@ select {
    ============================================================ */
 
 .stage-card {
+  --panel: rgba(0, 70, 104, 0.82);
+  --panel-2: rgba(255, 255, 255, 0.055);
+  --panel-solid: #004668;
+  --line: rgba(0, 200, 149, 0.24);
+  --line-soft: rgba(195, 213, 222, 0.14);
+  --line-strong: rgba(0, 200, 149, 0.48);
+  --text: #f4f8fb;
+  --text-dim: #c3d5de;
+  --text-mute: rgba(195, 213, 222, 0.76);
+  --white: #ffffff;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background:
-    radial-gradient(circle at 50% -20%, rgba(0, 200, 149, 0.16), transparent 40%),
-    linear-gradient(180deg, rgba(0, 70, 104, 0.92), rgba(0, 41, 62, 0.97));
-  box-shadow: 0 18px 44px rgba(6, 20, 35, 0.38);
+    radial-gradient(circle at 50% -20%, rgba(0, 200, 149, 0.12), transparent 40%),
+    linear-gradient(180deg, rgba(7, 88, 120, 0.97), rgba(0, 59, 86, 0.98));
+  box-shadow: 0 10px 26px rgba(32, 69, 82, 0.16);
   overflow: hidden;
 }
 
@@ -718,26 +741,6 @@ select {
 .dmq-marker { border: 1px solid rgba(239, 90, 106, 0.5); }
 .dmq-marker b { color: var(--red); font-size: 10px; }
 .dmq-marker span { color: var(--text-mute); font-size: 8px; }
-.ecosystem-legend {
-  position: absolute;
-  z-index: 5;
-  left: 50%;
-  bottom: 1.5%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 7px 12px;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  background: rgba(6, 27, 46, 0.94);
-}
-.ecosystem-legend span { display: flex; align-items: center; gap: 6px; color: var(--text-mute); font-size: 9px; white-space: nowrap; }
-.ecosystem-legend i { display: inline-block; width: 19px; height: 5px; }
-.legend-line { border-top: 2px dashed var(--green); }
-.legend-queue { border: 1px solid var(--green); border-radius: 2px; background: rgba(0, 200, 149, 0.25); }
-.legend-retain { border: 1px solid var(--amber); border-radius: 2px; }
-.legend-mesh { border-top: 3px dashed var(--cyan); }
 .ecosystem-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .ecosystem-controls { align-items: center; }
 .ecosystem-scenario {
@@ -880,6 +883,39 @@ select {
 .node-sub {
   font-size: 11.5px;
   color: var(--text-dim);
+}
+
+/* Lesson 6 puts asset/window identifiers in the value slot. Keep those
+   longer operational labels compact instead of letting the generic,
+   display-sized node value expand the analyzer cards. */
+.competing-consumers-lesson .stage .node {
+  width: 166px;
+  min-width: 166px;
+  padding: 12px;
+  gap: 6px;
+}
+.competing-consumers-lesson .stage .node-role {
+  white-space: nowrap;
+}
+.competing-consumers-lesson .stage .node-value {
+  font-size: 14px;
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+.competing-consumers-lesson .stage .node-badge {
+  font-size: 9px;
+}
+
+/* Lesson 9 carries names, delivery counts, protocols, and rates in each
+   consumer. Give that metadata room instead of compressing the badge. */
+.fanout-lesson .stage .node-role,
+.fanout-lesson .stage .queue-sub {
+  white-space: nowrap;
+}
+.fanout-lesson .stage .queue-sub {
+  flex: 0 0 auto;
+  padding-inline: 5px;
 }
 
 .node-badge {
@@ -1316,7 +1352,7 @@ button.btn.block {
   padding: 10px 12px;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.04);
+  background: #f6f9fc;
 }
 .control-group-label {
   font-size: 10px;
@@ -1333,7 +1369,7 @@ button.btn {
   align-items: center;
   gap: 7px;
   border: 1px solid var(--line);
-  background: rgba(0, 50, 76, 0.94);
+  background: #ffffff;
   color: var(--text);
   border-radius: var(--radius-sm);
   padding: 9px 14px;
@@ -1436,7 +1472,7 @@ button.btn.sm {
   justify-content: space-between;
 }
 .slider-field label b {
-  color: var(--green-bright);
+  color: var(--green);
   font-family: var(--font-mono);
 }
 input[type="range"] {
@@ -1464,7 +1500,7 @@ input[type="range"]::-webkit-slider-thumb {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.2);
+  background: #f6f9fc;
 }
 .segmented button {
   border: 0;
@@ -1484,7 +1520,7 @@ input[type="range"]::-webkit-slider-thumb {
 /* text input */
 input.text-input {
   border: 1px solid var(--line);
-  background: rgba(4, 17, 27, 0.9);
+  background: #ffffff;
   color: var(--text);
   border-radius: var(--radius-sm);
   padding: 8px 11px;
@@ -1498,7 +1534,7 @@ input.text-input:focus {
 }
 select.select-input {
   border: 1px solid var(--line);
-  background: rgba(4, 17, 27, 0.9);
+  background: #ffffff;
   color: var(--text);
   border-radius: var(--radius-sm);
   padding: 8px 11px;
@@ -1511,12 +1547,16 @@ select.select-input {
    ============================================================ */
 
 .predict {
-  border: 1px solid rgba(95, 211, 209, 0.28);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(95, 211, 209, 0.08), rgba(4, 18, 28, 0.6));
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(32, 38, 42, 0.08);
+}
+.predict .card-head {
+  background: #f6f9fc;
 }
 .predict .card-head h3 {
-  color: var(--cyan);
+  color: var(--green);
 }
 .predict-q {
   font-size: 15px;
@@ -1535,7 +1575,7 @@ select.select-input {
   padding: 11px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.2);
+  background: #ffffff;
   color: var(--text);
   font-size: 13.5px;
   cursor: pointer;
@@ -1546,8 +1586,8 @@ select.select-input {
   background: rgba(0, 200, 149, 0.08);
 }
 .predict-choice.picked {
-  border-color: var(--cyan);
-  background: rgba(95, 211, 209, 0.12);
+  border-color: var(--green);
+  background: rgba(0, 200, 149, 0.08);
 }
 .predict-choice.correct {
   border-color: var(--green);
@@ -1568,7 +1608,7 @@ select.select-input {
   color: var(--text);
 }
 .predict-reveal b {
-  color: var(--green-bright);
+  color: var(--green);
 }
 
 /* ============================================================
@@ -1657,7 +1697,8 @@ select.select-input {
 }
 .intro-hero h1 {
   font-size: 42px;
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-weight: 600;
   color: var(--white);
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -1958,4 +1999,192 @@ select.select-input {
   color: var(--text-mute);
   font-size: 10.5px;
   line-height: 1.4;
+}
+
+/* ============================================================
+   Light / dark presentation modes
+   ============================================================ */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 16px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.theme-toggle:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.theme-toggle span {
+  color: var(--green);
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Light mode uses an airy technical drawing surface rather than a dark console. */
+.app[data-theme="light"] .stage-card {
+  --green-bright: #00ad93;
+  --green-glow: #007d6e;
+  --cyan: #009193;
+  --blue: #1d61bc;
+  --violet: #8254c7;
+  --panel: #ffffff;
+  --panel-2: #f3f8fa;
+  --panel-solid: #ffffff;
+  --line: rgba(0, 70, 104, 0.18);
+  --line-soft: rgba(0, 70, 104, 0.11);
+  --line-strong: rgba(0, 200, 149, 0.48);
+  --text: #20262a;
+  --text-dim: #3f4955;
+  --text-mute: #647481;
+  --white: #20262a;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(0, 200, 149, 0.08), transparent 40%),
+    linear-gradient(180deg, #f7fbfc, #e6f1f4);
+  border-color: #cfe0e6;
+  box-shadow: 0 10px 24px rgba(32, 69, 82, 0.1);
+}
+.app[data-theme="light"] .stage-card .node,
+.app[data-theme="light"] .stage-card .ecosystem-client,
+.app[data-theme="light"] .stage-card .every-event-consumer {
+  background: linear-gradient(180deg, #ffffff, #f5f9fa);
+  box-shadow: 0 8px 20px rgba(32, 69, 82, 0.11);
+}
+.app[data-theme="light"] .stage-card .broker {
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(32, 69, 82, 0.1);
+}
+.app[data-theme="light"] .stage-card .queue,
+.app[data-theme="light"] .stage-card .qr-queue {
+  background: linear-gradient(180deg, #ffffff, #f4f8fa);
+}
+.app[data-theme="light"] .stage-card .queue-slots,
+.app[data-theme="light"] .stage-card .qr-msgs,
+.app[data-theme="light"] .stage-card .qchip {
+  background: rgba(0, 70, 104, 0.055);
+}
+.app[data-theme="light"] .stage-card .mesh-caption,
+.app[data-theme="light"] .stage-card .retained-value,
+.app[data-theme="light"] .stage-card .dmq-marker,
+.app[data-theme="light"] .stage-card .contract-example {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 5px 14px rgba(32, 69, 82, 0.08);
+}
+.app[data-theme="light"] .stage-card .retained-value {
+  border-color: rgba(0, 70, 104, 0.2);
+  box-shadow: 0 6px 16px rgba(32, 69, 82, 0.11);
+}
+.app[data-theme="light"] .stage-card .retained-value b {
+  color: var(--text-mute);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.app[data-theme="light"] .stage-card .retained-value span {
+  align-self: center;
+  margin-top: 3px;
+  padding: 4px 8px;
+  border: 1px solid rgba(0, 173, 147, 0.42);
+  border-radius: 999px;
+  background: rgba(0, 200, 149, 0.1);
+  color: #007d6e;
+}
+.app[data-theme="light"] .stage-card .ecosystem-region {
+  background: rgba(255, 255, 255, 0.34);
+  border-color: rgba(0, 70, 104, 0.18);
+}
+.app[data-theme="light"] .stage-card .msg-token {
+  background: rgba(255, 255, 255, 0.96);
+  color: #007d6e;
+}
+.app[data-theme="light"] .stage-card .msg-token.amber {
+  color: #9b6700;
+}
+.app[data-theme="light"] .stage-card .msg-token.red {
+  color: #c93f54;
+}
+.app[data-theme="light"] .stage-card .msg-token.violet {
+  color: #6f42b5;
+}
+.app[data-theme="light"] button.btn.danger {
+  color: #c63e36;
+  border-color: rgba(198, 62, 54, 0.62);
+  background: #fff4f1;
+  box-shadow: 0 2px 7px rgba(198, 62, 54, 0.09);
+}
+.app[data-theme="light"] button.btn.danger:hover:not(:disabled) {
+  color: #a82e29;
+  border-color: rgba(168, 46, 41, 0.8);
+  background: #ffe8e2;
+}
+.app[data-theme="light"] .stage-card .node.accent-amber {
+  border-color: rgba(190, 125, 0, 0.58);
+  box-shadow: 0 8px 20px rgba(155, 103, 0, 0.13);
+}
+.app[data-theme="light"] .stage-card .badge-warn {
+  color: #8a5b00;
+  background: rgba(244, 183, 64, 0.2);
+  border-color: rgba(174, 113, 0, 0.58);
+}
+
+/* Dark mode keeps the same brand system but restores a high-contrast demo surface. */
+.app[data-theme="dark"] {
+  --panel: rgba(0, 70, 104, 0.82);
+  --panel-2: rgba(255, 255, 255, 0.055);
+  --panel-solid: #004668;
+  --line: rgba(0, 200, 149, 0.24);
+  --line-soft: rgba(195, 213, 222, 0.14);
+  --line-strong: rgba(0, 200, 149, 0.5);
+  --text: #f4f8fb;
+  --text-dim: #c3d5de;
+  --text-mute: rgba(195, 213, 222, 0.76);
+  --white: #ffffff;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(0, 200, 149, 0.09), transparent 24%),
+    linear-gradient(180deg, #004668, #00324c 48%, #00293e);
+}
+.app[data-theme="dark"] .sidebar {
+  background: rgba(0, 41, 62, 0.98);
+}
+.app[data-theme="dark"] .lesson-layout > :first-child,
+.app[data-theme="dark"] .ecosystem-layout {
+  border-color: rgba(0, 200, 149, 0.18);
+  background: rgba(0, 50, 76, 0.72);
+}
+.app[data-theme="dark"] .stage-card {
+  background:
+    radial-gradient(circle at 50% -20%, rgba(0, 200, 149, 0.14), transparent 40%),
+    linear-gradient(180deg, rgba(0, 70, 104, 0.98), rgba(0, 41, 62, 0.99));
+  box-shadow: 0 16px 38px rgba(0, 15, 24, 0.34);
+}
+.app[data-theme="dark"] .control-group,
+.app[data-theme="dark"] .segmented {
+  background: rgba(255, 255, 255, 0.04);
+}
+.app[data-theme="dark"] button.btn,
+.app[data-theme="dark"] input.text-input,
+.app[data-theme="dark"] select.select-input {
+  background: rgba(0, 50, 76, 0.94);
+}
+.app[data-theme="dark"] button.btn.primary {
+  background: var(--green);
+}
+.app[data-theme="dark"] .predict {
+  border-color: var(--line);
+  background: rgba(0, 70, 104, 0.82);
+  box-shadow: 0 12px 30px rgba(0, 15, 24, 0.2);
+}
+.app[data-theme="dark"] .predict .card-head {
+  background: rgba(0, 50, 76, 0.7);
+}
+.app[data-theme="dark"] .predict-choice {
+  background: rgba(0, 41, 62, 0.8);
 }

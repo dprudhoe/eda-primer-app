@@ -161,8 +161,15 @@ export default function Lesson10Ecosystem() {
     cloudRdp: 0,
   });
   const [linkDepths, setLinkDepths] = useState<Record<LinkId, number>>({ fh: 0, fa: 0, ha: 0 });
+  const [telemetryValue, setTelemetryValue] = useState(72.4);
+  const [retainedValue, setRetainedValue] = useState(72.4);
+  const [hmiValue, setHmiValue] = useState<number | null>(72.4);
   const timers = useRef<number[]>([]);
-  const sequence = useRef({ workOrder: 0, inspection: 0 });
+  const sequence = useRef({ telemetry: 0, workOrder: 0, inspection: 0 });
+  const telemetryValueRef = useRef(72.4);
+  const retainedValueRef = useRef(72.4);
+  const retainedSequenceRef = useRef(0);
+  const hmiSequenceRef = useRef(0);
   const consumersRef = useRef(consumers);
   const linksRef = useRef(links);
   const queueJobs = useRef<Record<QueueId, QueuedDelivery[]>>({
@@ -249,6 +256,18 @@ export default function Lesson10Ecosystem() {
     consumersRef.current = { ...consumersRef.current, [id]: next };
     setConsumers(consumersRef.current);
     if (next) {
+      if (id === "hmi") {
+        const retained = retainedValueRef.current;
+        const retainedSequence = retainedSequenceRef.current;
+        const reading = `${retained.toFixed(1)} °C`;
+        emit({ from: RETAINED, to: F, label: `${reading} · retained`, tone: "amber", duration: 0.65 });
+        later(680, () => emit({ from: F, to: HMI, label: reading, tone: "green", duration: 0.75 }));
+        later(1450, () => {
+          if (retainedSequence < hmiSequenceRef.current) return;
+          hmiSequenceRef.current = retainedSequence;
+          setHmiValue(retained);
+        });
+      }
       (Object.keys(QUEUE_CONSUMER) as QueueId[])
         .filter((queue) => QUEUE_CONSUMER[queue] === id)
         .forEach((queue) => later(80, () => drainQueue(queue)));
@@ -260,9 +279,30 @@ export default function Lesson10Ecosystem() {
   };
 
   const publishTelemetry = () => {
-    hop(0, PLC, F, "72.4 °C");
-    if (consumersRef.current.hmi) hop(750, F, HMI, "72.4 °C");
-    hop(750, F, RETAINED, "retain", "amber");
+    const telemetrySequence = ++sequence.current.telemetry;
+    const previous = telemetryValueRef.current;
+    const direction = previous >= 73.2 ? -1 : previous <= 71.6 ? 1 : Math.random() < 0.5 ? -1 : 1;
+    const change = Math.random() < 0.55 ? 0.1 : 0.2;
+    const next = Math.round((previous + direction * change) * 10) / 10;
+    const reading = `${next.toFixed(1)} °C`;
+    telemetryValueRef.current = next;
+    setTelemetryValue(next);
+
+    hop(0, PLC, F, reading);
+    if (consumersRef.current.hmi) {
+      hop(750, F, HMI, reading);
+      later(1520, () => {
+        if (telemetrySequence < hmiSequenceRef.current) return;
+        hmiSequenceRef.current = telemetrySequence;
+        setHmiValue(next);
+      });
+    }
+    hop(750, F, RETAINED, reading, "amber");
+    later(1520, () => {
+      retainedSequenceRef.current = telemetrySequence;
+      retainedValueRef.current = next;
+      setRetainedValue(next);
+    });
     later(750, () => sendAcross("fh", {
       from: F,
       to: H,
@@ -409,15 +449,15 @@ export default function Lesson10Ecosystem() {
         <button className={`mesh-caption mesh-caption-fa ${links.fa ? "" : "dead"}`} onClick={() => toggleLink("fa")}>Factory ↔ AWS · {links.fa ? "up" : "down"}</button>
         <button className={`mesh-caption mesh-caption-ha ${links.ha ? "" : "dead"}`} onClick={() => toggleLink("ha")}>HQ ↔ AWS · {links.ha ? "up" : "down"}</button>
 
-        <Client pt={PLC} name="PLC + Ignition Edge" detail="Telemetry and state" protocol="MQTT" tone="green" enabled={streams.telemetry} onClick={() => setStreams((current) => ({ ...current, telemetry: !current.telemetry }))} />
+        <Client pt={PLC} name="PLC + Ignition Edge" detail={`Temperature ${telemetryValue.toFixed(1)} °C`} protocol="MQTT" tone="green" enabled={streams.telemetry} onClick={() => setStreams((current) => ({ ...current, telemetry: !current.telemetry }))} />
         <Client pt={CAMERA} name="Vision Camera" detail="Inspection requested" protocol="MQTT" tone="cyan" enabled={streams.inspection} onClick={() => setStreams((current) => ({ ...current, inspection: !current.inspection }))} />
-        <Client pt={HMI} name="Line HMI" detail="Live values" protocol="MQTT · direct" tone="amber" enabled={consumers.hmi} onClick={() => toggleConsumer("hmi")} />
-        <Client pt={MES} name="MES" detail="Work orders" protocol="SMF · QoS 1" tone="cyan" enabled={consumers.mes} onClick={() => toggleConsumer("mes")} />
+        <Client pt={HMI} name="Line HMI" detail={hmiValue == null ? "Waiting for value" : `Value ${hmiValue.toFixed(1)} °C`} protocol="MQTT · QoS 0" tone="green" enabled={consumers.hmi} onClick={() => toggleConsumer("hmi")} />
+        <Client pt={MES} name="MES" detail="Work orders" protocol="SMF · Guaranteed" tone="cyan" enabled={consumers.mes} onClick={() => toggleConsumer("mes")} />
         <Client pt={ANALYZERS} name="Vibration Analyzers" detail="Competing workers" protocol="AMQP" tone="violet" enabled={consumers.analyzers} onClick={() => toggleConsumer("analyzers")} />
         <QueueAt pt={ORDER_QUEUE} label="orders" depth={queueDepths.orders} />
         <QueueAt pt={ANALYSIS_QUEUE} label="analysis" depth={queueDepths.analysis} tone="violet" />
         <Anchored pt={RETAINED} zIndex={4}>
-          <div className="retained-value"><b>Retained value</b><span>72.4 °C</span></div>
+          <div className="retained-value"><b>Retained value</b><span>{retainedValue.toFixed(1)} °C</span></div>
         </Anchored>
         <Anchored pt={F}><Broker small label="Factory" /></Anchored>
 
@@ -444,13 +484,6 @@ export default function Lesson10Ecosystem() {
         {linkDepths.fh > 0 ? <QueueAt pt={{ x: 61, y: 54 }} label="WAN" depth={linkDepths.fh} tone="amber" /> : null}
         {linkDepths.fa > 0 ? <QueueAt pt={{ x: 39, y: 54 }} label="WAN" depth={linkDepths.fa} tone="amber" /> : null}
         {linkDepths.ha > 0 ? <QueueAt pt={{ x: 50, y: 36 }} label="WAN" depth={linkDepths.ha} tone="amber" /> : null}
-
-        <div className="ecosystem-legend">
-          <span><i className="legend-line direct" />Direct / live</span>
-          <span><i className="legend-queue" />Durable queue</span>
-          <span><i className="legend-retain" />Retained state</span>
-          <span><i className="legend-mesh" />Event mesh</span>
-        </div>
 
         <AnimatePresence>
           {flyers.map((flyer) => (
