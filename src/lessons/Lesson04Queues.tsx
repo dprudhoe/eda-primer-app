@@ -141,35 +141,45 @@ export default function Lesson04Queues() {
           </div>
         </div>
 
-        <ControlBar>
-          <div className="control-row">
-            <ControlGroup label="Example events — click to publish">
-              <div className="example-grid">
-                {EXAMPLE_EVENTS.map((t) => (
-                  <Btn key={t} className="block" onClick={() => publish(t)}>
-                    {t}
-                  </Btn>
-                ))}
-              </div>
-            </ControlGroup>
-          </div>
-          <div className="control-row">
-            <ControlGroup label="Sequences">
-              <Btn variant="primary" onClick={publishSequence}>
-                ▶ Publish sample sequence
-              </Btn>
-              <Btn variant="ghost" sm onClick={resetAll}>
-                Reset queues
-              </Btn>
-            </ControlGroup>
-          </div>
-          <div className="control-row">
-            <ControlGroup label="Custom event">
-              <input className="text-input" value={customTopic} onChange={(e) => setCustomTopic(e.target.value)} style={{ minWidth: 240 }} />
-              <Btn onClick={() => publish(customTopic)}>Publish</Btn>
-            </ControlGroup>
-          </div>
-        </ControlBar>
+        <div className="control-stack">
+          <ControlBar>
+            <div className="control-row">
+              <ControlGroup label="Example events — click to publish">
+                <div className="example-grid">
+                  {EXAMPLE_EVENTS.map((t) => (
+                    <Btn key={t} className="block" onClick={() => publish(t)}>
+                      {t}
+                    </Btn>
+                  ))}
+                </div>
+              </ControlGroup>
+            </div>
+            <div className="control-row">
+              <ControlGroup label="Sequences">
+                <Btn variant="primary" onClick={publishSequence}>
+                  ▶ Publish sample sequence
+                </Btn>
+                <Btn variant="ghost" sm onClick={resetAll}>
+                  Reset queues
+                </Btn>
+              </ControlGroup>
+            </div>
+            <div className="control-row">
+              <ControlGroup label="Custom event">
+                <input className="text-input" value={customTopic} onChange={(e) => setCustomTopic(e.target.value)} style={{ minWidth: 240 }} />
+                <Btn onClick={() => publish(customTopic)}>Publish</Btn>
+              </ControlGroup>
+            </div>
+          </ControlBar>
+
+          <Card title="Try this">
+            <div className="prose" style={{ fontSize: 13.5 }}>
+              <p><b style={{ color: "var(--green-bright)" }}>1.</b> Publish the sample sequence and watch each queue attract only what its subscription matches.</p>
+              <p><b style={{ color: "var(--green-bright)" }}>2.</b> Notice <code>factory/line1/quality/failed</code> lands in <em>both</em> Line 1 Queue and Quality Queue.</p>
+              <p><b style={{ color: "var(--green-bright)" }}>3.</b> Attach a consumer to drain a queue; pause it and keep publishing to watch its depth grow.</p>
+            </div>
+          </Card>
+        </div>
       </div>
 
       <div className="rail">
@@ -179,14 +189,6 @@ export default function Lesson04Queues() {
               Production events are published once to topics. Three durable queues use different
               subscriptions to attract only the events their consumers need.
             </p>
-          </div>
-        </Card>
-
-        <Card title="Try this (guided)">
-          <div className="prose" style={{ fontSize: 13.5 }}>
-            <p><b style={{ color: "var(--green-bright)" }}>1.</b> Publish the sample sequence and watch each queue attract only what its subscription matches.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>2.</b> Notice <code>factory/line1/quality/failed</code> lands in <em>both</em> Line 1 Queue and Quality Queue.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>3.</b> Attach a consumer to drain a queue; pause it and keep publishing to watch its depth grow.</p>
           </div>
         </Card>
 

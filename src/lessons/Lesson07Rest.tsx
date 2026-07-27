@@ -121,6 +121,7 @@ export default function Lesson07Rest() {
           </AnimatePresence>
         </Stage>
 
+        <div className="control-stack">
         <ControlBar>
           <div className="control-row">
             <ControlGroup label="Publish (HTTP POST)">
@@ -137,6 +138,13 @@ export default function Lesson07Rest() {
             </ControlGroup>
           </div>
         </ControlBar>
+
+        <Card title="Try this">
+          <div className="prose" style={{ fontSize: 13 }}>
+            <p>POST a few messages, then flip the endpoint to <b>5xx</b> — watch the REST queue hold and retry instead of losing data. Flip it back to 2xx and it drains.</p>
+          </div>
+        </Card>
+        </div>
       </div>
 
       <div className="rail">
@@ -160,12 +168,6 @@ export default function Lesson07Rest() {
             <p><b style={{ color: "var(--green-bright)" }}>Ingress:</b> any system that can make an HTTP POST can publish to the broker — no MQTT client, no SDK. Great for ERPs, cloud functions, and webhooks.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Egress:</b> a queue can push each message to an external REST API, dequeuing only on a 2xx. The broker handles retries and back-pressure.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Policy:</b> because a REST Delivery Point consumes from a queue, it can use retry limits, TTL, and a DMQ just like other guaranteed consumers.</p>
-          </div>
-        </Card>
-
-        <Card title="Try this">
-          <div className="prose" style={{ fontSize: 13 }}>
-            <p>POST a few messages, then flip the endpoint to <b>5xx</b> — watch the REST queue hold and retry instead of losing data. Flip it back to 2xx and it drains.</p>
           </div>
         </Card>
 

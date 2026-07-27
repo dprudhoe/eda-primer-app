@@ -317,6 +317,17 @@ select {
   grid-row: 2;
   margin-top: 0;
 }
+.lesson-layout > :first-child > .control-stack {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.control-stack > .controls {
+  margin-top: 0;
+}
 
 /* Collapse before the sidebar + lesson rail begin squeezing the demo canvas.
    This is viewport-based, not device-based, so it also applies to narrow desktop windows. */
@@ -395,7 +406,8 @@ select {
     padding-bottom: 8px;
   }
   .lesson-layout > :first-child > .stage-card,
-  .lesson-layout > :first-child > .controls {
+  .lesson-layout > :first-child > .controls,
+  .lesson-layout > :first-child > .control-stack {
     grid-column: 1;
     grid-row: auto;
     min-width: 720px;
@@ -1783,6 +1795,24 @@ select.select-input {
 }
 .timeline-status.pending {
   color: var(--text-mute);
+}
+.outcome-card .card-head {
+  padding-block: 10px;
+}
+.outcome-card .card-body {
+  padding: 6px 16px;
+}
+.outcome-card .timeline-row {
+  gap: 9px;
+  padding: 4px;
+}
+.outcome-card .timeline-icon {
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+}
+.outcome-card .timeline-label {
+  line-height: 1.2;
 }
 
 /* ============================================================

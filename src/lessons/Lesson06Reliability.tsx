@@ -326,6 +326,7 @@ export default function Lesson06Reliability() {
           </AnimatePresence>
         </Stage>
 
+        <div className="control-stack">
         <ControlBar>
           <div className="control-row">
             <ControlGroup label="ERP publisher">
@@ -359,6 +360,16 @@ export default function Lesson06Reliability() {
             <Btn variant="ghost" sm disabled={demoActive} onClick={clearMessages}>Clear all</Btn>
           </div>
         </ControlBar>
+
+        <Card title="Try this">
+          <div className="prose" style={{ fontSize: 13 }}>
+            <p><b style={{ color: "var(--green-bright)" }}>Valid + processing succeeds</b> → applies the update and acknowledges.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Valid + processing error</b> → temporary failure; retries with a delay, then succeeds once processing recovers.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Invalid</b> → permanent failure; rejected straight to the DMQ, no retries.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Time to Live (TTL)</b> → sets how long a queued message remains eligible for delivery. When it expires, the broker removes it from the work queue and routes it to the DMQ when one is configured.</p>
+          </div>
+        </Card>
+        </div>
       </div>
 
       <div className="rail">
@@ -369,15 +380,6 @@ export default function Lesson06Reliability() {
               permanent payload errors, retry limits, and expiration determine whether each update
               succeeds or moves to the dead message queue.
             </p>
-          </div>
-        </Card>
-
-        <Card title="How to read it" className="activity-card">
-          <div className="prose" style={{ fontSize: 13 }}>
-            <p><b style={{ color: "var(--green-bright)" }}>Valid + processing succeeds</b> → applies the update and acknowledges.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Valid + processing error</b> → temporary failure; retries with a delay, then succeeds once processing recovers.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Invalid</b> → permanent failure; rejected straight to the DMQ, no retries.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Time to Live (TTL)</b> → sets how long a queued message remains eligible for delivery. When it expires, the broker removes it from the work queue and routes it to the DMQ when one is configured.</p>
           </div>
         </Card>
 

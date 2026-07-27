@@ -220,6 +220,7 @@ export default function Lesson07FanOutMixed() {
           </AnimatePresence>
         </Stage>
 
+        <div className="control-stack">
         <ControlBar>
           <div className="control-row">
             <ControlGroup label="Run inspection workflow">
@@ -238,6 +239,15 @@ export default function Lesson07FanOutMixed() {
             </ControlGroup>
           </div>
         </ControlBar>
+
+        <Card title="Try this">
+          <div className="prose" style={{ fontSize: 13 }}>
+            <p><b style={{ color: "var(--green-bright)" }}>Take the QMS app offline</b> and publish — its queue depth grows while live consumers keep reacting; bring it back and it drains.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Take a direct consumer offline</b> — it simply misses events, no buffering. The others are unaffected.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>The REST endpoint is backed by a queue</b>, so it buffers offline and flushes on reconnect — unlike a plain direct consumer.</p>
+          </div>
+        </Card>
+        </div>
       </div>
 
       <div className="rail">
@@ -266,14 +276,6 @@ export default function Lesson07FanOutMixed() {
               dashboard and line HMI take it <strong>live</strong>; historian, analytics, and QMS use
               <strong> durable queues</strong>; REST is queue-backed. MQTT, AMQP, REST, and SMF coexist.
             </p>
-          </div>
-        </Card>
-
-        <Card title="Try this">
-          <div className="prose" style={{ fontSize: 13 }}>
-            <p><b style={{ color: "var(--green-bright)" }}>Take the QMS app offline</b> and publish — its queue depth grows while live consumers keep reacting; bring it back and it drains.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Take a direct consumer offline</b> — it simply misses events, no buffering. The others are unaffected.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>The REST endpoint is backed by a queue</b>, so it buffers offline and flushes on reconnect — unlike a plain direct consumer.</p>
           </div>
         </Card>
 
