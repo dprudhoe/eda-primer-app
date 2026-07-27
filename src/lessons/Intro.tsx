@@ -48,7 +48,7 @@ export default function Intro({
           <h4>Grounded in the plant floor</h4>
           <p>
             Every lesson uses a real industrial scenario: PLC telemetry, machine state, MES work
-            orders, quality events, and multi-site plants — not abstract "foo/bar" topics.
+            orders, quality events, and connected operations — not abstract "foo/bar" topics.
           </p>
         </div>
         <div className="why-card">

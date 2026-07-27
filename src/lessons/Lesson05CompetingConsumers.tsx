@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import {
   Anchored,
+  Broker,
   Btn,
   Card,
   ControlBar,
@@ -28,7 +29,9 @@ type Worker = {
   processed: number;
 };
 
-const QUEUE: Pt = { x: 17, y: 50 };
+const SENSOR: Pt = { x: 17, y: 50 };
+const HUB: Pt = { x: 39, y: 50 };
+const QUEUE: Pt = { x: 62, y: 50 };
 let windowId = 1;
 let wkId = 1;
 const ASSETS = ["PUMP-07", "MOTOR-12", "FAN-03", "COMP-02"];
@@ -44,14 +47,12 @@ function makeWorker(name: string, speedMs: number): Worker {
 
 function workerPt(i: number, n: number): Pt {
   const y = n === 1 ? 50 : 16 + (i * (68 / (n - 1)));
-  return { x: 80, y };
+  return { x: 87, y };
 }
 
 export default function Lesson05CompetingConsumers() {
   const { flyers, emit, remove } = useFlow();
-  const [queue, setQueue] = useState<AnalysisMsg[]>(() =>
-    Array.from({ length: 12 }, makeWindow),
-  );
+  const [queue, setQueue] = useState<AnalysisMsg[]>([]);
   const [workers, setWorkers] = useState<Worker[]>(() => [
     makeWorker("Analyzer A", 1200),
     makeWorker("Analyzer B", 1200),
@@ -60,8 +61,11 @@ export default function Lesson05CompetingConsumers() {
 
   const queueRef = useRef(queue);
   const workersRef = useRef(workers);
+  const publishTimers = useRef<number[]>([]);
   queueRef.current = queue;
   workersRef.current = workers;
+
+  useEffect(() => () => publishTimers.current.forEach((timer) => window.clearTimeout(timer)), []);
 
   // scheduler — all computation from refs, side effects performed exactly once
   useEffect(() => {
@@ -97,10 +101,19 @@ export default function Lesson05CompetingConsumers() {
   }, []);
 
   const publish = (count: number) => {
-    setQueue((q) => [
-      ...q,
-      ...Array.from({ length: count }, makeWindow),
-    ]);
+    const windows = Array.from({ length: count }, makeWindow);
+    windows.forEach((message, index) => {
+      const stagger = Math.min(index * 90, 900);
+      publishTimers.current.push(window.setTimeout(() => {
+        emit({ from: SENSOR, to: HUB, tone: "green", label: message.label, duration: 0.45 });
+      }, stagger));
+      publishTimers.current.push(window.setTimeout(() => {
+        emit({ from: HUB, to: QUEUE, tone: "green", label: message.label, duration: 0.5 });
+      }, stagger + 460));
+      publishTimers.current.push(window.setTimeout(() => {
+        setQueue((current) => [...current, message]);
+      }, stagger + 970));
+    });
   };
 
   const addWorker = () => setWorkers((ws) => (ws.length >= 3 ? ws : [...ws, makeWorker(`Analyzer ${String.fromCharCode(65 + ws.length)}`, 1300)]));
@@ -112,13 +125,15 @@ export default function Lesson05CompetingConsumers() {
   const n = workers.length;
 
   return (
-    <div className="lesson-layout">
+    <div className="lesson-layout competing-consumers-lesson">
       <div>
         <Stage
-          note="Each vibration window is delivered to exactly one analyzer. Faster analyzers naturally take a bigger share — the queue levels compute-intensive work across the pool."
+          note="The vibration sensor publishes analysis windows through Solace into a queue. Each window is delivered to exactly one analyzer; faster analyzers naturally take a bigger share."
           minHeight={520}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <line className="flow-line active" x1={SENSOR.x} y1={SENSOR.y} x2={HUB.x} y2={HUB.y} vectorEffect="non-scaling-stroke" />
+            <line className="flow-line active" x1={HUB.x} y1={HUB.y} x2={QUEUE.x} y2={QUEUE.y} vectorEffect="non-scaling-stroke" />
             {workers.map((w, i) => {
               const p = workerPt(i, n);
               return (
@@ -134,6 +149,20 @@ export default function Lesson05CompetingConsumers() {
               );
             })}
           </svg>
+
+          <Anchored pt={SENSOR}>
+            <Node
+              icon="∿"
+              name="Vibration Sensor"
+              role="Publishes analysis windows"
+              accent="cyan"
+              style={{ width: 220, minWidth: 220 }}
+            />
+          </Anchored>
+
+          <Anchored pt={HUB}>
+            <Broker small />
+          </Anchored>
 
           <Anchored pt={QUEUE}>
             <div className="queue" style={{ minWidth: 210 }}>

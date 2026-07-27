@@ -7,6 +7,9 @@ import { Btn } from "./components/kit";
 export default function App() {
   const [active, setActive] = useState<string>("intro");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    window.localStorage.getItem("eda-primer-theme") === "dark" ? "dark" : "light",
+  );
 
   // Support deep links + browser back/forward via hash (#lesson-id)
   useEffect(() => {
@@ -29,6 +32,10 @@ export default function App() {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, []);
 
+  useEffect(() => {
+    window.localStorage.setItem("eda-primer-theme", theme);
+  }, [theme]);
+
   const go = (id: string) => {
     setActive(id);
     setMenuOpen(false);
@@ -43,7 +50,7 @@ export default function App() {
   const next = idx >= 0 && idx < LESSONS.length - 1 ? LESSONS[idx + 1] : null;
 
   return (
-    <div className="app">
+    <div className="app" data-theme={theme}>
       <button
         className="mobile-menu-button"
         type="button"
@@ -70,6 +77,15 @@ export default function App() {
           <img className="sidebar-logo" src={logoUrl} alt="Solace" />
           <div className="sidebar-kicker">Interactive Primer</div>
           <div className="sidebar-title">Event-Driven Architecture for Industrial Systems</div>
+          <button
+            type="button"
+            className="theme-toggle"
+            aria-pressed={theme === "dark"}
+            onClick={() => setTheme((current) => current === "light" ? "dark" : "light")}
+          >
+            <span aria-hidden="true">{theme === "light" ? "☼" : "◐"}</span>
+            {theme === "light" ? "Light" : "Dark"} mode
+          </button>
         </div>
         <nav className="nav">
           <button
@@ -103,7 +119,7 @@ export default function App() {
         {active === "intro" || !lesson ? (
           <Intro onStart={() => go(LESSONS[0].id)} onGo={go} />
         ) : (
-          <div className="lesson">
+          <div className={`lesson ${lesson.id === "ecosystem" ? "ecosystem-lesson" : ""}`}>
             <header className="lesson-header">
               <div className="lesson-kicker">Lesson {lesson.index}</div>
               <h1 className="lesson-title">{lesson.title}</h1>

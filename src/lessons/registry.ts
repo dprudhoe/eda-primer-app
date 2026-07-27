@@ -9,6 +9,7 @@ import Lesson06 from "./Lesson06Reliability";
 import Lesson07 from "./Lesson07Rest";
 import Lesson08 from "./Lesson07FanOutMixed";
 import Lesson09 from "./Lesson09EventMesh";
+import Lesson10 from "./Lesson10Ecosystem";
 
 export type Lesson = {
   id: string;
@@ -87,7 +88,7 @@ export const LESSONS: Lesson[] = [
   {
     id: "fan-out",
     index: 9,
-    title: "Fan-Out & Mixed Delivery",
+    title: "Event Reuse & Mixed Delivery",
     short: "One event, many contracts",
     goal: "Understand how one published event can independently serve many consumers — each with the delivery guarantee it needs.",
     Component: Lesson08,
@@ -99,5 +100,13 @@ export const LESSONS: Lesson[] = [
     short: "Events across sites & clouds",
     goal: "Understand how events move reliably across plants, data centers, edge environments, and multiple clouds.",
     Component: Lesson09,
+  },
+  {
+    id: "ecosystem",
+    index: 11,
+    title: "The Manufacturing Ecosystem",
+    short: "All patterns in one system",
+    goal: "Explore connected operations across factory, HQ, and cloud as applications consume events, act, and publish the next step in coordinated manufacturing workflows.",
+    Component: Lesson10,
   },
 ];

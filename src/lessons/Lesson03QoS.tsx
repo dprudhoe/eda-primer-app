@@ -178,22 +178,49 @@ export default function Lesson03QoS() {
           </AnimatePresence>
         </Stage>
 
-        <ControlBar>
-          <div className="control-row">
-            <ControlGroup label="Publish">
-              <Btn variant="primary" onClick={run} disabled={running}>
-                ▶ Publish WorkOrderReleased
-              </Btn>
-            </ControlGroup>
-            <ControlGroup label="Environment">
-              <Toggle checked={consumerUp} onChange={setConsumerUp} label="Consumer online" />
-              <Toggle checked={dbUp} onChange={setDbUp} label="Database online" />
-            </ControlGroup>
-          </div>
-        </ControlBar>
+        <div className="control-stack">
+          <ControlBar>
+            <div className="control-row">
+              <ControlGroup label="Publish">
+                <Btn variant="primary" onClick={run} disabled={running}>
+                  ▶ Publish WorkOrderReleased
+                </Btn>
+              </ControlGroup>
+              <ControlGroup label="Environment">
+                <Toggle checked={consumerUp} onChange={setConsumerUp} label="Consumer online" />
+                <Toggle checked={dbUp} onChange={setDbUp} label="Database online" />
+              </ControlGroup>
+            </div>
+          </ControlBar>
+
+          <Card title="Delivery vs. business outcome" className="activity-card outcome-card">
+            <div className="timeline">
+              {STEP_LABELS.map((label, i) => {
+                const s = steps[i];
+                return (
+                  <div className="timeline-row" key={i}>
+                    <div className={`timeline-icon ${s}`}>{s === "ok" ? "✓" : s === "fail" ? "✕" : i + 1}</div>
+                    <div className="timeline-label">{label}</div>
+                    <span className={`timeline-status ${s}`}>{s === "ok" ? "Success" : s === "fail" ? "Failed" : "—"}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
       </div>
 
       <div className="rail">
+        <Card title="Scenario">
+          <div className="prose">
+            <p>
+              An MES publishes a work order with MQTT QoS 1. Follow it through the broker,
+              consumer, and database to compare successful message delivery with successful
+              business processing.
+            </p>
+          </div>
+        </Card>
+
         <Prediction
           question="The broker accepted the message and the consumer acknowledged it (QoS 1). Was the work order successfully processed?"
           choices={[
@@ -208,27 +235,6 @@ export default function Lesson03QoS() {
             </>
           }
         />
-
-        <Card title="Delivery vs. business outcome">
-          <div className="timeline">
-            {STEP_LABELS.map((label, i) => {
-              const s = steps[i];
-              const isTransport = i <= 3;
-              return (
-                <div className="timeline-row" key={i}>
-                  <div className={`timeline-icon ${s}`}>{s === "ok" ? "✓" : s === "fail" ? "✕" : i + 1}</div>
-                  <div className="timeline-label">
-                    {label}
-                    <div style={{ fontSize: 10, color: "var(--text-mute)", marginTop: 1 }}>
-                      {isTransport ? "Transport layer (MQTT QoS)" : "Application / business layer"}
-                    </div>
-                  </div>
-                  <span className={`timeline-status ${s}`}>{s === "ok" ? "Success" : s === "fail" ? "Failed" : "—"}</span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
 
         <InsightCard
           items={[
