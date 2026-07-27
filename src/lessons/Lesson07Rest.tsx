@@ -155,7 +155,7 @@ export default function Lesson07Rest() {
           }
         />
 
-        <Card title="Two directions">
+        <Card title="Scenario">
           <div className="prose" style={{ fontSize: 13.5 }}>
             <p><b style={{ color: "var(--green-bright)" }}>Ingress:</b> any system that can make an HTTP POST can publish to the broker — no MQTT client, no SDK. Great for ERPs, cloud functions, and webhooks.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Egress:</b> a queue can push each message to an external REST API, dequeuing only on a 2xx. The broker handles retries and back-pressure.</p>

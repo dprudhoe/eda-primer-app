@@ -12,7 +12,6 @@ import {
   Particle,
   QueueChip,
   Stage,
-  Toggle,
 } from "../components/kit";
 import { Pt, useFlow } from "../components/useFlow";
 
@@ -35,6 +34,7 @@ function Client({ pt, name, detail, protocol, tone = "green", enabled = true, on
         className={`ecosystem-client ecosystem-${tone} ${enabled ? "" : "offline"} ${onClick ? "interactive" : ""}`}
         onClick={onClick}
         aria-pressed={enabled}
+        data-action={onClick ? `Click to ${enabled ? "disable" : "enable"}` : undefined}
         title={onClick ? `Click to ${enabled ? "disable" : "enable"} ${name}` : undefined}
       >
         <div className="ecosystem-client-name">{name}</div>
@@ -251,6 +251,21 @@ export default function Lesson10Ecosystem() {
     if (next) later(80, () => drainLink(id));
   };
 
+  const replayRetainedToHmi = (value: number, telemetrySequence: number) => {
+    if (telemetrySequence < hmiSequenceRef.current) return;
+    hmiSequenceRef.current = telemetrySequence;
+    const reading = `${value.toFixed(1)} °C`;
+    emit({ from: RETAINED, to: F, label: `${reading} · retained`, tone: "amber", duration: 0.65 });
+    later(680, () => {
+      if (!consumersRef.current.hmi || telemetrySequence < hmiSequenceRef.current) return;
+      emit({ from: F, to: HMI, label: reading, tone: "green", duration: 0.75 });
+    });
+    later(1450, () => {
+      if (!consumersRef.current.hmi || telemetrySequence !== hmiSequenceRef.current) return;
+      setHmiValue(value);
+    });
+  };
+
   const toggleConsumer = (id: ConsumerId) => {
     const next = !consumersRef.current[id];
     consumersRef.current = { ...consumersRef.current, [id]: next };
@@ -259,14 +274,7 @@ export default function Lesson10Ecosystem() {
       if (id === "hmi") {
         const retained = retainedValueRef.current;
         const retainedSequence = retainedSequenceRef.current;
-        const reading = `${retained.toFixed(1)} °C`;
-        emit({ from: RETAINED, to: F, label: `${reading} · retained`, tone: "amber", duration: 0.65 });
-        later(680, () => emit({ from: F, to: HMI, label: reading, tone: "green", duration: 0.75 }));
-        later(1450, () => {
-          if (retainedSequence < hmiSequenceRef.current) return;
-          hmiSequenceRef.current = retainedSequence;
-          setHmiValue(retained);
-        });
+        replayRetainedToHmi(retained, retainedSequence);
       }
       (Object.keys(QUEUE_CONSUMER) as QueueId[])
         .filter((queue) => QUEUE_CONSUMER[queue] === id)
@@ -289,19 +297,24 @@ export default function Lesson10Ecosystem() {
     setTelemetryValue(next);
 
     hop(0, PLC, F, reading);
-    if (consumersRef.current.hmi) {
-      hop(750, F, HMI, reading);
-      later(1520, () => {
-        if (telemetrySequence < hmiSequenceRef.current) return;
+    later(750, () => {
+      if (!consumersRef.current.hmi || telemetrySequence < hmiSequenceRef.current) return;
+      hmiSequenceRef.current = telemetrySequence;
+      emit({ from: F, to: HMI, label: reading, tone: "green", duration: 0.75 });
+      later(770, () => {
+        if (!consumersRef.current.hmi || telemetrySequence !== hmiSequenceRef.current) return;
         hmiSequenceRef.current = telemetrySequence;
         setHmiValue(next);
       });
-    }
+    });
     hop(750, F, RETAINED, reading, "amber");
     later(1520, () => {
       retainedSequenceRef.current = telemetrySequence;
       retainedValueRef.current = next;
       setRetainedValue(next);
+      if (consumersRef.current.hmi && telemetrySequence > hmiSequenceRef.current) {
+        replayRetainedToHmi(next, telemetrySequence);
+      }
     });
     later(750, () => sendAcross("fh", {
       from: F,
@@ -401,11 +414,18 @@ export default function Lesson10Ecosystem() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streams.workOrders]);
 
-  const activeStreams = Object.values(streams).filter(Boolean).length;
   const bufferedLinks = Object.values(linkDepths).reduce((sum, depth) => sum + depth, 0);
 
   return (
     <div className="ecosystem-layout">
+      <Card title="Scenario" className="ecosystem-intro">
+        <p className="prose">
+          This is the complete manufacturing ecosystem built across the previous lessons. Producers
+          and consumers at the factory, HQ, and AWS use direct delivery, retained state, durable
+          queues, REST, and an event mesh according to the outcome each application needs.
+        </p>
+      </Card>
+
       <Stage
         minHeight={900}
         note={
@@ -445,9 +465,9 @@ export default function Lesson10Ecosystem() {
           <line className={`flow-line ${consumers.cloudApi ? "active" : "dead"}`} x1={A.x} y1={A.y} x2={CLOUD_API.x} y2={CLOUD_API.y} />
         </svg>
 
-        <button className={`mesh-caption mesh-caption-fh ${links.fh ? "" : "dead"}`} onClick={() => toggleLink("fh")}>Factory ↔ HQ · {links.fh ? "up" : "down"}</button>
-        <button className={`mesh-caption mesh-caption-fa ${links.fa ? "" : "dead"}`} onClick={() => toggleLink("fa")}>Factory ↔ AWS · {links.fa ? "up" : "down"}</button>
-        <button className={`mesh-caption mesh-caption-ha ${links.ha ? "" : "dead"}`} onClick={() => toggleLink("ha")}>HQ ↔ AWS · {links.ha ? "up" : "down"}</button>
+        <button className={`mesh-caption mesh-caption-fh ${links.fh ? "" : "dead"}`} data-action={`Click to ${links.fh ? "disconnect" : "reconnect"}`} title={`Click to ${links.fh ? "disconnect" : "reconnect"} the Factory–HQ broker link`} onClick={() => toggleLink("fh")}>Factory ↔ HQ · {links.fh ? "up" : "down"}</button>
+        <button className={`mesh-caption mesh-caption-fa ${links.fa ? "" : "dead"}`} data-action={`Click to ${links.fa ? "disconnect" : "reconnect"}`} title={`Click to ${links.fa ? "disconnect" : "reconnect"} the Factory–AWS broker link`} onClick={() => toggleLink("fa")}>Factory ↔ AWS · {links.fa ? "up" : "down"}</button>
+        <button className={`mesh-caption mesh-caption-ha ${links.ha ? "" : "dead"}`} data-action={`Click to ${links.ha ? "disconnect" : "reconnect"}`} title={`Click to ${links.ha ? "disconnect" : "reconnect"} the HQ–AWS broker link`} onClick={() => toggleLink("ha")}>HQ ↔ AWS · {links.ha ? "up" : "down"}</button>
 
         <Client pt={PLC} name="PLC + Ignition Edge" detail={`Temperature ${telemetryValue.toFixed(1)} °C`} protocol="MQTT" tone="green" enabled={streams.telemetry} onClick={() => setStreams((current) => ({ ...current, telemetry: !current.telemetry }))} />
         <Client pt={CAMERA} name="Vision Camera" detail="Inspection requested" protocol="MQTT" tone="cyan" enabled={streams.inspection} onClick={() => setStreams((current) => ({ ...current, inspection: !current.inspection }))} />
@@ -496,27 +516,13 @@ export default function Lesson10Ecosystem() {
 
       <ControlBar>
         <div className="control-row ecosystem-controls">
-          <ControlGroup label="Continuous event streams">
-            <Toggle
-              checked={streams.telemetry}
-              onChange={(telemetry) => setStreams((current) => ({ ...current, telemetry }))}
-              label="Device telemetry · every 3s"
-            />
-            <Toggle
-              checked={streams.inspection}
-              onChange={(inspection) => setStreams((current) => ({ ...current, inspection }))}
-              label="Vision inspection · every 5s"
-            />
-            <Toggle
-              checked={streams.workOrders}
-              onChange={(workOrders) => setStreams((current) => ({ ...current, workOrders }))}
-              label="ERP work order · every 10s"
-            />
+          <ControlGroup label="Interact directly with the diagram">
+            <div className="ecosystem-instructions">
+              <p><b>Applications:</b> click any producer or consumer to disable or enable it and observe the delivery behavior.</p>
+              <p><b>Broker links:</b> click a labeled connection between brokers to disconnect or reconnect that path and watch guaranteed events buffer or drain.</p>
+            </div>
             <Btn variant="ghost" onClick={clearInFlight}>Clear in-flight</Btn>
           </ControlGroup>
-          <span className="ecosystem-scenario">
-            {activeStreams} of 3 streams enabled. Streams publish and animate independently, so several flows can be active at once.
-          </span>
         </div>
       </ControlBar>
 

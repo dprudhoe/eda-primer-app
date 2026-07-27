@@ -228,8 +228,13 @@ export function Card({
   children: ReactNode;
   className?: string;
 }) {
+  const normalizedTitle = title?.toLowerCase() ?? "";
+  const semanticClass = [
+    normalizedTitle.startsWith("try this") ? "try-card" : "",
+    normalizedTitle === "scenario" ? "scenario-card" : "",
+  ].filter(Boolean).join(" ");
   return (
-    <div className={`card ${className}`}>
+    <div className={`card ${semanticClass} ${className}`}>
       {title ? (
         <div className="card-head">
           {icon}
@@ -261,7 +266,7 @@ export function ControlGroup({ label, children }: { label?: string; children: Re
 
 export function InsightCard({ items }: { items: ReactNode[] }) {
   return (
-    <Card title="What you learn">
+    <Card title="Key takeaways" className="key-takeaways">
       <ul className="insight-list">
         {items.map((it, i) => (
           <li key={i}>{it}</li>
@@ -301,7 +306,7 @@ export function Prediction({
   return (
     <div className="card predict">
       <div className="card-head">
-        <h3>Predict First</h3>
+        <h3>Knowledge check</h3>
       </div>
       <div className="card-body">
         <div className="predict-q">{question}</div>

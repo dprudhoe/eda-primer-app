@@ -298,13 +298,24 @@ select {
 }
 
 /* A narrow pale frame bridges the white editorial page and blue simulation canvas. */
-.lesson-layout > :first-child,
 .ecosystem-layout {
   position: relative;
   padding: 12px;
   border: 1px solid #dce9ee;
   border-radius: 16px;
   background: #eef6f8;
+}
+.lesson-layout > :first-child {
+  display: contents;
+}
+.lesson-layout > :first-child > .stage-card {
+  grid-column: 1;
+  grid-row: 2;
+}
+.lesson-layout > :first-child > .controls {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: 0;
 }
 
 /* Collapse before the sidebar + lesson rail begin squeezing the demo canvas.
@@ -375,6 +386,9 @@ select {
     grid-template-columns: 1fr;
   }
   .lesson-layout > :first-child {
+    display: contents;
+  }
+  .lesson-layout {
     max-width: 100%;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
@@ -382,6 +396,8 @@ select {
   }
   .lesson-layout > :first-child > .stage-card,
   .lesson-layout > :first-child > .controls {
+    grid-column: 1;
+    grid-row: auto;
     min-width: 720px;
   }
 }
@@ -399,11 +415,35 @@ select {
 }
 
 .rail {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  position: sticky;
-  top: 0;
+  display: contents;
+}
+.rail > :not(.try-card, .activity-card, .scenario-card, .predict) {
+  grid-column: 1;
+}
+.rail > .scenario-card {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  order: -10;
+}
+.rail > .try-card,
+.rail > .activity-card {
+  grid-column: 2;
+  grid-row: 3;
+}
+.rail > .predict {
+  grid-column: 1 / -1;
+  order: 99;
+}
+
+@media (max-width: 1360px) {
+  .rail > *,
+  .rail > .try-card,
+  .rail > .activity-card,
+  .rail > .scenario-card,
+  .rail > .predict {
+    grid-column: 1;
+    grid-row: auto;
+  }
 }
 
 /* ============================================================
@@ -460,7 +500,7 @@ select {
   color: var(--green-bright);
 }
 
-/* Insight (What you learn) list */
+/* Key-takeaway list */
 .insight-list {
   list-style: none;
   margin: 0;
@@ -632,6 +672,7 @@ select {
 }
 .ecosystem-client {
   appearance: none;
+  position: relative;
   display: block;
   width: 132px;
   min-height: 72px;
@@ -656,6 +697,33 @@ select {
 .ecosystem-client.interactive:focus-visible {
   outline: 2px solid var(--green-bright);
   outline-offset: 3px;
+}
+.ecosystem-client.interactive::after,
+.mesh-caption::after {
+  content: attr(data-action);
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translate(-50%, 3px);
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: rgba(0, 41, 62, 0.96);
+  box-shadow: 0 5px 14px rgba(0, 20, 32, 0.24);
+  color: #ffffff;
+  font: 700 9px/1.2 var(--font-sans);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+.ecosystem-client.interactive:hover::after,
+.ecosystem-client.interactive:focus-visible::after,
+.mesh-caption:hover::after,
+.mesh-caption:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 .ecosystem-client.offline {
   opacity: 0.43;
@@ -743,12 +811,17 @@ select {
 .dmq-marker span { color: var(--text-mute); font-size: 8px; }
 .ecosystem-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .ecosystem-controls { align-items: center; }
-.ecosystem-scenario {
-  flex: 1 1 420px;
-  min-width: 360px;
+.ecosystem-instructions {
+  width: 100%;
   color: var(--text-dim);
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ecosystem-instructions p + p {
+  margin-top: 8px;
+}
+.ecosystem-instructions b {
+  color: var(--text);
 }
 
 
@@ -2187,4 +2260,179 @@ select.select-input {
 }
 .app[data-theme="dark"] .predict-choice {
   background: rgba(0, 41, 62, 0.8);
+}
+
+/* Use the extra room on desktop displays for legibility. The first step is
+   intentionally modest for 1080p-sized viewports; 2K displays get a wider
+   canvas and a second typography step. */
+@media (min-width: 1600px) {
+  .lesson {
+    max-width: 1560px;
+  }
+
+  .stage-note {
+    font-size: 13.5px;
+  }
+  .node-name {
+    font-size: 14.5px;
+  }
+  .node-role {
+    font-size: 12px;
+  }
+  .node-sub {
+    font-size: 12.5px;
+  }
+  .node-value {
+    font-size: 21px;
+  }
+  .competing-consumers-lesson .stage .node-value {
+    font-size: 15px;
+  }
+  .queue-name {
+    font-size: 13.5px;
+  }
+  .queue-depth,
+  .queue-msg,
+  .queue-empty {
+    font-size: 12px;
+  }
+  .queue-sub {
+    font-size: 11.5px;
+  }
+  .qchip-label {
+    font-size: 9.5px;
+  }
+  .msg-token {
+    font-size: 13px;
+  }
+
+  .controls-title {
+    font-size: 12px;
+  }
+  .control-group-label {
+    font-size: 11px;
+  }
+  button.btn {
+    font-size: 14px;
+  }
+  button.btn.sm {
+    font-size: 13px;
+  }
+  .toggle,
+  .segmented button {
+    font-size: 13.5px;
+  }
+  .slider-field label {
+    font-size: 12px;
+  }
+  input.text-input,
+  select.select-input {
+    font-size: 14px;
+  }
+
+  .ecosystem-client-name {
+    font-size: 12px;
+  }
+  .ecosystem-client-detail {
+    font-size: 10px;
+  }
+  .ecosystem-protocol,
+  .mesh-caption {
+    font-size: 9px;
+  }
+  .retained-value b,
+  .ecosystem-region > span {
+    font-size: 10px;
+  }
+  .retained-value span {
+    font-size: 12px;
+  }
+  .dmq-marker b {
+    font-size: 11px;
+  }
+  .dmq-marker span {
+    font-size: 9px;
+  }
+}
+
+@media (min-width: 2200px) {
+  .lesson {
+    max-width: 1800px;
+    padding-inline: 40px;
+  }
+  .lesson.ecosystem-lesson {
+    max-width: 1880px;
+  }
+  .lesson-layout {
+    grid-template-columns: minmax(0, 1.9fr) minmax(360px, 0.72fr);
+    gap: 24px;
+  }
+  .lesson-layout > :first-child,
+  .rail {
+    grid-template-columns: minmax(0, 1.9fr) minmax(360px, 0.72fr);
+    gap-inline: 24px;
+  }
+  .ecosystem-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.9fr) minmax(360px, 0.72fr);
+    align-items: start;
+    min-width: 0;
+  }
+  .ecosystem-layout > .ecosystem-intro {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .ecosystem-layout > .stage-card {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .ecosystem-layout > .controls {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0;
+  }
+  .ecosystem-layout > .ecosystem-summary {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+  .ecosystem-layout .ecosystem-instructions {
+    min-width: 0;
+  }
+
+  .stage-note {
+    font-size: 14px;
+  }
+  .node-name {
+    font-size: 15px;
+  }
+  .node-role {
+    font-size: 12.5px;
+  }
+  .node-sub {
+    font-size: 13px;
+  }
+  .queue-name {
+    font-size: 14px;
+  }
+  .queue-msg {
+    font-size: 12.5px;
+  }
+  button.btn {
+    font-size: 14.5px;
+  }
+
+  .ecosystem-client {
+    width: 144px;
+    min-height: 78px;
+  }
+  .ecosystem-client-name {
+    font-size: 13px;
+  }
+  .ecosystem-client-detail {
+    font-size: 10.5px;
+  }
+  .ecosystem-protocol,
+  .mesh-caption {
+    font-size: 9.5px;
+  }
 }

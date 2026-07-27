@@ -39,8 +39,8 @@ npm run preview  # serve the production build
 | 10 | Event Mesh | Multi-broker mesh, subscription propagation, WAN + consumer-outage store-and-forward |
 | 11 | The Manufacturing Ecosystem | All messaging patterns operating together across factory, HQ, and AWS |
 
-Each lesson follows the same shape: an animated **stage**, a **controls** panel, a
-**"Predict First"** prompt, the **scenario**, and a **"What you learn"** summary.
+Each lesson follows the same shape: a **scenario**, an animated **stage**, a
+**controls** panel, a **"Key takeaways"** summary, and a closing **knowledge check**.
 
 ## Structure
 

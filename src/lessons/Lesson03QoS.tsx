@@ -194,6 +194,16 @@ export default function Lesson03QoS() {
       </div>
 
       <div className="rail">
+        <Card title="Scenario">
+          <div className="prose">
+            <p>
+              An MES publishes a work order with MQTT QoS 1. Follow it through the broker,
+              consumer, and database to compare successful message delivery with successful
+              business processing.
+            </p>
+          </div>
+        </Card>
+
         <Prediction
           question="The broker accepted the message and the consumer acknowledged it (QoS 1). Was the work order successfully processed?"
           choices={[
@@ -209,7 +219,7 @@ export default function Lesson03QoS() {
           }
         />
 
-        <Card title="Delivery vs. business outcome">
+        <Card title="Delivery vs. business outcome" className="activity-card">
           <div className="timeline">
             {STEP_LABELS.map((label, i) => {
               const s = steps[i];

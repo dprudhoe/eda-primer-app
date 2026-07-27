@@ -173,6 +173,15 @@ export default function Lesson04Queues() {
       </div>
 
       <div className="rail">
+        <Card title="Scenario">
+          <div className="prose">
+            <p>
+              Production events are published once to topics. Three durable queues use different
+              subscriptions to attract only the events their consumers need.
+            </p>
+          </div>
+        </Card>
+
         <Card title="Try this (guided)">
           <div className="prose" style={{ fontSize: 13.5 }}>
             <p><b style={{ color: "var(--green-bright)" }}>1.</b> Publish the sample sequence and watch each queue attract only what its subscription matches.</p>

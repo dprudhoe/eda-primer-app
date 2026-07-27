@@ -192,7 +192,7 @@ export default function Lesson00EventPatterns() {
           }
         />
 
-        <Card title="Choose the contract">
+        <Card title="Scenario">
           <div className="contract-comparison">
             <div>
               <strong>Current State</strong>

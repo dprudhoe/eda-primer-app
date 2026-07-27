@@ -362,7 +362,17 @@ export default function Lesson06Reliability() {
       </div>
 
       <div className="rail">
-        <Card title="How to read it">
+        <Card title="Scenario">
+          <div className="prose">
+            <p>
+              ERP BOM updates wait in a durable queue for the MES. Temporary processing errors,
+              permanent payload errors, retry limits, and expiration determine whether each update
+              succeeds or moves to the dead message queue.
+            </p>
+          </div>
+        </Card>
+
+        <Card title="How to read it" className="activity-card">
           <div className="prose" style={{ fontSize: 13 }}>
             <p><b style={{ color: "var(--green-bright)" }}>Valid + processing succeeds</b> → applies the update and acknowledges.</p>
             <p><b style={{ color: "var(--green-bright)" }}>Valid + processing error</b> → temporary failure; retries with a delay, then succeeds once processing recovers.</p>

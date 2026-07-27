@@ -268,6 +268,16 @@ export default function Lesson09EventMesh() {
       </div>
 
       <div className="rail">
+        <Card title="Scenario">
+          <div className="prose">
+            <p>
+              Factory, HQ, and AWS applications connect only to their local broker. The event mesh
+              carries each event to remote regions with matching consumer interest and buffers
+              guaranteed traffic when a WAN path is unavailable.
+            </p>
+          </div>
+        </Card>
+
         <Card title="Try this">
           <div className="prose" style={{ fontSize: 13 }}>
             <p><b style={{ color: "var(--green-bright)" }}>Quality:</b> flows from the factory publisher to its local broker, then only to AWS and its interested consumer.</p>
