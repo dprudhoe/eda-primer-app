@@ -1231,6 +1231,9 @@ select {
   color: var(--amber);
   font-weight: 700;
 }
+.queue-msg .ttl.retry {
+  color: var(--red);
+}
 .queue-empty {
   font-size: 11px;
   color: var(--text-mute);
@@ -2225,6 +2228,19 @@ select.select-input {
 .app[data-theme="light"] .stage-card .qr-msgs,
 .app[data-theme="light"] .stage-card .qchip {
   background: rgba(0, 70, 104, 0.055);
+}
+.app[data-theme="light"] .stage-card .queue-msg .ttl {
+  padding: 1px 4px;
+  border: 1px solid rgba(155, 103, 0, 0.36);
+  border-radius: 4px;
+  background: #fff2c7;
+  color: #795000;
+  font-weight: 800;
+}
+.app[data-theme="light"] .stage-card .queue-msg .ttl.retry {
+  border-color: rgba(174, 47, 68, 0.34);
+  background: #ffe8ec;
+  color: #a52f44;
 }
 .app[data-theme="light"] .stage-card .mesh-caption,
 .app[data-theme="light"] .stage-card .retained-value,

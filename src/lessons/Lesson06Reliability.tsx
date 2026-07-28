@@ -32,6 +32,7 @@ const QUEUE: Pt = { x: 17, y: 40 };
 const CONSUMER: Pt = { x: 52, y: 40 };
 const DMQ: Pt = { x: 84, y: 40 };
 const DB: Pt = { x: 52, y: 84 };
+const DELIVERY_MS = 600;
 const PROCESS_MS = 900;
 let mId = 1;
 
@@ -48,7 +49,7 @@ export default function Lesson06Reliability() {
 
   const [queue, setQueue] = useState<Msg[]>([]);
   const [dmq, setDmq] = useState<Dead[]>([]);
-  const [proc, setProc] = useState<{ id: number; until: number } | null>(null);
+  const [proc, setProc] = useState<{ id: number; arrivesAt: number; until: number; processingOk?: boolean } | null>(null);
   const [, forceTick] = useState(0);
   const timers = useRef<number[]>([]);
   const flowGeneration = useRef(0);
@@ -134,7 +135,7 @@ export default function Lesson06Reliability() {
                 meta: { dead: { id: m.id, label: m.label, reason: "Rejected (malformed BOM update)" } satisfies Dead, generation: flowGeneration.current },
               });
             }
-          } else if (r.processingOk) {
+          } else if (r.proc.processingOk ?? r.processingOk) {
             // valid BOM update processed successfully → commit, ack, leave queue
             finish((qq) => qq.filter((x) => x.id !== m.id));
           } else {
@@ -167,17 +168,26 @@ export default function Lesson06Reliability() {
       if (!r.paused && !r.proc) {
         const next = r.queue.find((m) => m.nextEligibleAt <= now);
         if (next) {
-          setProc({ id: next.id, until: now + PROCESS_MS });
-          emit({ from: QUEUE, to: CONSUMER, tone: "green", label: next.label, duration: 0.6 });
+          const arrivesAt = now + DELIVERY_MS;
+          const activeGeneration = flowGeneration.current;
+          setProc({ id: next.id, arrivesAt, until: arrivesAt + PROCESS_MS });
+          emit({ from: QUEUE, to: CONSUMER, tone: "green", label: next.label, duration: DELIVERY_MS / 1000 });
           // only a valid BOM update attempts the database write; an invalid payload never touches it
           if (next.kind === "ok") {
-            emit({
-              from: CONSUMER,
-              to: DB,
-              tone: r.processingOk ? "green" : "red",
-              label: "apply update",
-              duration: 0.9,
-              meta: { processingError: !r.processingOk, generation: flowGeneration.current },
+            laterTimer(DELIVERY_MS, () => {
+              if (flowGeneration.current !== activeGeneration || refs.current.proc?.id !== next.id) return;
+              const processingSucceeds = refs.current.processingOk;
+              const activeProc = { ...refs.current.proc, processingOk: processingSucceeds };
+              refs.current.proc = activeProc;
+              setProc(activeProc);
+              emit({
+                from: CONSUMER,
+                to: DB,
+                tone: processingSucceeds ? "green" : "red",
+                label: "apply update",
+                duration: PROCESS_MS / 1000,
+                meta: { processingError: !processingSucceeds, generation: activeGeneration },
+              });
             });
           }
         }
@@ -263,7 +273,7 @@ export default function Lesson06Reliability() {
                         >
                           <span>{m.label}</span>
                           <span style={{ display: "flex", gap: 6 }}>
-                            {m.deliveries > 0 ? <span className="ttl" style={{ color: "var(--red)" }}>⟳{m.deliveries}/{maxRetries}</span> : null}
+                            {m.deliveries > 0 ? <span className="ttl retry">⟳{m.deliveries}/{maxRetries}</span> : null}
                             {ttlLeft != null ? <span className="ttl">⏱{ttlLeft.toFixed(0)}s</span> : null}
                           </span>
                         </motion.div>
@@ -281,7 +291,7 @@ export default function Lesson06Reliability() {
               name="MES"
               role="Consumer"
               accent={paused ? "slate" : proc ? "green" : "cyan"}
-              value={proc ? "processing…" : paused ? "paused" : "idle"}
+              value={proc ? (now < proc.arrivesAt ? "receiving…" : "processing…") : paused ? "paused" : "idle"}
               sub={processingErrorVisible ? "temporary processing error" : "processing ready"}
               lit={!!proc}
               offline={paused}
