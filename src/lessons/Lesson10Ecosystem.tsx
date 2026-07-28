@@ -135,9 +135,9 @@ const QUEUE_SOURCES: Record<QueueId, Pt> = {
 export default function Lesson10Ecosystem() {
   const { flyers, emit, remove } = useFlow();
   const [streams, setStreams] = useState({
-    telemetry: true,
-    workOrders: true,
-    inspection: true,
+    telemetry: false,
+    workOrders: false,
+    inspection: false,
   });
   const [producers, setProducers] = useState<Record<ProducerId, boolean>>({
     telemetry: true,
@@ -172,6 +172,7 @@ export default function Lesson10Ecosystem() {
   const [hmiValue, setHmiValue] = useState<number | null>(72.4);
   const timers = useRef<number[]>([]);
   const sequence = useRef({ telemetry: 0, workOrder: 0, inspection: 0 });
+  const maintenanceEvaluations = useRef(0);
   const telemetryValueRef = useRef(72.4);
   const retainedValueRef = useRef(72.4);
   const retainedSequenceRef = useRef(0);
@@ -425,7 +426,8 @@ export default function Lesson10Ecosystem() {
               label: "deliver",
               tone: "violet",
               onDelivered: () => {
-                if (Math.random() >= 1 / 3) return;
+                const evaluation = ++maintenanceEvaluations.current;
+                if ((evaluation - 1) % 3 !== 0) return;
                 later(500, publishMaintenance);
               },
             });
@@ -568,7 +570,7 @@ export default function Lesson10Ecosystem() {
         <Anchored pt={H}><Broker small label="HQ" /></Anchored>
 
         <Client pt={AI} name="AI Inspection" detail="Consumes frame, publishes result" protocol="SMF" tone="violet" enabled={consumers.ai} onClick={() => toggleConsumer("ai")} />
-        <Client pt={ANALYTICS} name="Cloud Analytics" detail="Independent processing" protocol="AMQP" tone="blue" enabled={consumers.analytics} onClick={() => toggleConsumer("analytics")} />
+        <Client pt={ANALYTICS} name="Predictive Maintenance" detail="Evaluates inspection results" protocol="AMQP" tone="blue" enabled={consumers.analytics} onClick={() => toggleConsumer("analytics")} />
         <Client pt={CMMS} name="CMMS" detail="Maintenance work management" protocol="REST" tone="cyan" enabled={consumers.cmms} onClick={() => toggleConsumer("cmms")} />
         <QueueAt pt={AI_QUEUE} label="AI" depth={queueDepths.ai} tone="violet" />
         <QueueAt pt={ANALYTICS_QUEUE} label="analytics" depth={queueDepths.analytics} tone="blue" />
@@ -632,7 +634,7 @@ export default function Lesson10Ecosystem() {
                     </Btn>
                   </div>
                 </div>
-                <p>The camera triggers AWS AI inspection. The result reaches the HMI, QMS, historian, and Cloud Analytics. The HMI can publish an adjustment command to Ignition Edge; when Cloud Analytics determines maintenance is required, it publishes <code>MaintenanceRequired</code> to CMMS and MES. Offline applications and unavailable mesh paths demonstrate which parts of the workflow buffer and which direct deliveries are missed.</p>
+                <p>The camera triggers AWS AI inspection. The result reaches the HMI, QMS, historian, and Predictive Maintenance. The HMI can publish an adjustment command to Ignition Edge; when Predictive Maintenance determines maintenance is required, it publishes <code>MaintenanceRequired</code> to CMMS and MES. Offline applications and unavailable mesh paths demonstrate which parts of the workflow buffer and which direct deliveries are missed.</p>
               </div>
               <div>
                 <b>4. Cross-region delivery</b>
