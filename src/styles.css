@@ -861,6 +861,21 @@ select {
   color: var(--text);
   font-size: 12px;
 }
+.workflow-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.workflow-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+.workflow-actions .btn {
+  min-width: 86px;
+  white-space: nowrap;
+}
 .workflow-list p {
   margin-top: 3px;
   color: var(--text-dim);

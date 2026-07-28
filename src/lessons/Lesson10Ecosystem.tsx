@@ -3,6 +3,7 @@ import { AnimatePresence } from "framer-motion";
 import {
   Anchored,
   Broker,
+  Btn,
   Card,
   ControlBar,
   ControlGroup,
@@ -93,6 +94,7 @@ const ANALYTICS_QUEUE: Pt = { x: 32, y: 21 };
 const CMMS_RDP: Pt = { x: 16, y: 35 };
 
 type ConsumerId = "hmi" | "mes" | "analyzers" | "qms" | "historian" | "enterprise" | "ai" | "analytics" | "cmms";
+type ProducerId = "telemetry" | "workOrders" | "inspection";
 type QueueId = "orders" | "analysis" | "quality" | "history" | "rdp" | "ai" | "analytics" | "cmmsRdp";
 type LinkId = "fh" | "fa" | "ha";
 type Tone = "green" | "amber" | "red" | "violet";
@@ -137,6 +139,11 @@ export default function Lesson10Ecosystem() {
     workOrders: true,
     inspection: true,
   });
+  const [producers, setProducers] = useState<Record<ProducerId, boolean>>({
+    telemetry: true,
+    workOrders: true,
+    inspection: true,
+  });
   const [consumers, setConsumers] = useState<Record<ConsumerId, boolean>>({
     hmi: true,
     mes: true,
@@ -170,6 +177,7 @@ export default function Lesson10Ecosystem() {
   const retainedSequenceRef = useRef(0);
   const hmiSequenceRef = useRef(0);
   const streamsRef = useRef(streams);
+  const producersRef = useRef(producers);
   const consumersRef = useRef(consumers);
   const linksRef = useRef(links);
   const queueJobs = useRef<Record<QueueId, QueuedDelivery[]>>({
@@ -181,6 +189,7 @@ export default function Lesson10Ecosystem() {
   const linkJobs = useRef<Record<LinkId, BufferedLinkDelivery[]>>({ fh: [], fa: [], ha: [] });
   const linkDraining = useRef<Record<LinkId, boolean>>({ fh: false, fa: false, ha: false });
   streamsRef.current = streams;
+  producersRef.current = producers;
   consumersRef.current = consumers;
   linksRef.current = links;
   const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
@@ -283,7 +292,23 @@ export default function Lesson10Ecosystem() {
     }
   };
 
+  const toggleProducer = (id: ProducerId) => {
+    const next = !producersRef.current[id];
+    producersRef.current = { ...producersRef.current, [id]: next };
+    setProducers(producersRef.current);
+  };
+
+  const toggleContinuous = (id: keyof typeof streams) => {
+    const next = !streamsRef.current[id];
+    if (next && !producersRef.current[id]) {
+      producersRef.current = { ...producersRef.current, [id]: true };
+      setProducers(producersRef.current);
+    }
+    setStreams((current) => ({ ...current, [id]: next }));
+  };
+
   const publishTelemetry = () => {
+    if (!producersRef.current.telemetry) return;
     const telemetrySequence = ++sequence.current.telemetry;
     const previous = telemetryValueRef.current;
     const direction = previous >= 73.2 ? -1 : previous <= 71.6 ? 1 : Math.random() < 0.5 ? -1 : 1;
@@ -323,6 +348,7 @@ export default function Lesson10Ecosystem() {
   };
 
   const publishWorkOrder = () => {
+    if (!producersRef.current.workOrders) return;
     const id = `WO-${String(++sequence.current.workOrder).padStart(2, "0")}`;
     hop(0, ERP, H, id);
     later(750, () => {
@@ -344,7 +370,7 @@ export default function Lesson10Ecosystem() {
               label: "WorkOrderCompleted",
               tone: "green",
               onArrive: () => {
-                if (streamsRef.current.workOrders) hop(0, H, ERP, "completed");
+                hop(0, H, ERP, "completed");
                 enqueue("history", { to: HISTORIAN, label: "archive", tone: "green" });
               },
             }));
@@ -355,7 +381,31 @@ export default function Lesson10Ecosystem() {
     });
   };
 
+  const publishMaintenance = () => {
+    if (!consumersRef.current.analytics) return;
+    hop(0, ANALYTICS, A, "MaintenanceRequired", "amber");
+    later(780, () => {
+      enqueue("cmmsRdp", {
+        to: CMMS,
+        label: "HTTP POST",
+        tone: "amber",
+      });
+      sendAcross("fa", {
+        from: A,
+        to: F,
+        label: "MaintenanceRequired",
+        tone: "amber",
+        onArrive: () => enqueue("orders", {
+          to: MES,
+          label: "maintenance",
+          tone: "amber",
+        }),
+      });
+    });
+  };
+
   const publishInspection = () => {
+    if (!producersRef.current.inspection) return;
     const id = `INS-${String(++sequence.current.inspection).padStart(2, "0")}`;
     hop(0, CAMERA, F, id);
     later(750, () => sendAcross("fa", {
@@ -376,25 +426,7 @@ export default function Lesson10Ecosystem() {
               tone: "violet",
               onDelivered: () => {
                 if (Math.random() >= 1 / 3) return;
-                hop(500, ANALYTICS, A, "MaintenanceRequired", "amber");
-                later(1280, () => {
-                  enqueue("cmmsRdp", {
-                    to: CMMS,
-                    label: "HTTP POST",
-                    tone: "amber",
-                  });
-                  sendAcross("fa", {
-                    from: A,
-                    to: F,
-                    label: "MaintenanceRequired",
-                    tone: "amber",
-                    onArrive: () => enqueue("orders", {
-                      to: MES,
-                      label: "maintenance",
-                      tone: "amber",
-                    }),
-                  });
-                });
+                later(500, publishMaintenance);
               },
             });
             sendAcross("fa", {
@@ -410,7 +442,7 @@ export default function Lesson10Ecosystem() {
                   // The HMI reacts to the result by publishing a command back through the broker.
                   hop(0, HMI, F, "AdjustmentCommand", "amber");
                   later(780, () => {
-                    if (streamsRef.current.telemetry) hop(0, F, PLC, "apply adjustment", "amber");
+                    hop(0, F, PLC, "apply adjustment", "amber");
                   });
                 });
               },
@@ -440,7 +472,7 @@ export default function Lesson10Ecosystem() {
       window.clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streams.telemetry]);
+  }, [streams.telemetry, producers.telemetry]);
 
   useEffect(() => {
     if (!streams.inspection) return;
@@ -451,7 +483,7 @@ export default function Lesson10Ecosystem() {
       window.clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streams.inspection]);
+  }, [streams.inspection, producers.inspection]);
 
   useEffect(() => {
     if (!streams.workOrders) return;
@@ -462,7 +494,7 @@ export default function Lesson10Ecosystem() {
       window.clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streams.workOrders]);
+  }, [streams.workOrders, producers.workOrders]);
 
   const bufferedLinks = Object.values(linkDepths).reduce((sum, depth) => sum + depth, 0);
 
@@ -511,8 +543,8 @@ export default function Lesson10Ecosystem() {
         <button className={`mesh-caption mesh-caption-fa ${links.fa ? "" : "dead"}`} data-action={`Click to ${links.fa ? "disconnect" : "reconnect"}`} title={`Click to ${links.fa ? "disconnect" : "reconnect"} the Factory–AWS broker link`} onClick={() => toggleLink("fa")}>Factory ↔ AWS · {links.fa ? "up" : "down"}</button>
         <button className={`mesh-caption mesh-caption-ha ${links.ha ? "" : "dead"}`} data-action={`Click to ${links.ha ? "disconnect" : "reconnect"}`} title={`Click to ${links.ha ? "disconnect" : "reconnect"} the HQ–AWS broker link`} onClick={() => toggleLink("ha")}>HQ ↔ AWS · {links.ha ? "up" : "down"}</button>
 
-        <Client pt={PLC} name="PLC + Ignition Edge" detail={`Temperature ${telemetryValue.toFixed(1)} °C`} protocol="MQTT" tone="green" enabled={streams.telemetry} onClick={() => setStreams((current) => ({ ...current, telemetry: !current.telemetry }))} />
-        <Client pt={CAMERA} name="Vision Camera" detail="Inspection requested" protocol="MQTT" tone="cyan" enabled={streams.inspection} onClick={() => setStreams((current) => ({ ...current, inspection: !current.inspection }))} />
+        <Client pt={PLC} name="PLC + Ignition Edge" detail={`Temperature ${telemetryValue.toFixed(1)} °C`} protocol="MQTT" tone="green" enabled={producers.telemetry} onClick={() => toggleProducer("telemetry")} />
+        <Client pt={CAMERA} name="Vision Camera" detail="Inspection requested" protocol="MQTT" tone="cyan" enabled={producers.inspection} onClick={() => toggleProducer("inspection")} />
         <Client pt={HMI} name="Line HMI" detail={hmiValue == null ? "Waiting for value" : `Value ${hmiValue.toFixed(1)} °C`} protocol="MQTT · QoS 0" tone="green" enabled={consumers.hmi} onClick={() => toggleConsumer("hmi")} />
         <Client pt={MES} name="MES" detail="Orders → completion" protocol="SMF · Guaranteed" tone="cyan" enabled={consumers.mes} onClick={() => toggleConsumer("mes")} />
         <Client pt={ANALYZERS} name="Vibration Analyzers" detail="Competing workers" protocol="AMQP" tone="violet" enabled={consumers.analyzers} onClick={() => toggleConsumer("analyzers")} />
@@ -523,7 +555,7 @@ export default function Lesson10Ecosystem() {
         </Anchored>
         <Anchored pt={F}><Broker small label="Factory" /></Anchored>
 
-        <Client pt={ERP} name="ERP" detail="Orders + completion status" protocol="REST + events" tone="blue" enabled={streams.workOrders} onClick={() => setStreams((current) => ({ ...current, workOrders: !current.workOrders }))} />
+        <Client pt={ERP} name="ERP" detail="Orders + completion status" protocol="REST + events" tone="blue" enabled={producers.workOrders} onClick={() => toggleProducer("workOrders")} />
         <Client pt={QMS} name="QMS" detail="Every inspection result" protocol="AMQP" tone="blue" enabled={consumers.qms} onClick={() => toggleConsumer("qms")} />
         <Client pt={HISTORIAN} name="Historian" detail="Operational event history" protocol="SMF" tone="green" enabled={consumers.historian} onClick={() => toggleConsumer("historian")} />
         <Client pt={ENTERPRISE_API} name="Enterprise API" detail="Broker-managed delivery" protocol="REST · 2xx ack" tone="cyan" enabled={consumers.enterprise} onClick={() => toggleConsumer("enterprise")} />
@@ -567,23 +599,43 @@ export default function Lesson10Ecosystem() {
           <Card title="Events drive the next step" className="workflow-guide">
             <div className="workflow-list">
               <div>
-                <b>1. Telemetry and current state</b>
+                <div className="workflow-heading">
+                  <b>1. Telemetry and current state</b>
+                  <div className="workflow-actions">
+                    <Btn sm onClick={publishTelemetry}>Run once</Btn>
+                    <Btn sm variant={streams.telemetry ? "primary" : "ghost"} onClick={() => toggleContinuous("telemetry")}>
+                      {streams.telemetry ? "Continuous on" : "Continuous"}
+                    </Btn>
+                  </div>
+                </div>
                 <p>PLC + Ignition Edge publishes temperature to the HMI, retained value, and historian. An offline HMI misses live updates but receives the retained value when it reconnects; the historian’s queue buffers.</p>
               </div>
               <div>
-                <b>2. Work-order lifecycle</b>
+                <div className="workflow-heading">
+                  <b>2. Work-order lifecycle</b>
+                  <div className="workflow-actions">
+                    <Btn sm onClick={publishWorkOrder}>Run once</Btn>
+                    <Btn sm variant={streams.workOrders ? "primary" : "ghost"} onClick={() => toggleContinuous("workOrders")}>
+                      {streams.workOrders ? "Continuous on" : "Continuous"}
+                    </Btn>
+                  </div>
+                </div>
                 <p>ERP publishes a work order to the MES queue. MES processes it and publishes <code>WorkOrderCompleted</code> to ERP and the historian. Taking MES offline grows its order queue; taking the historian offline grows its history queue.</p>
               </div>
               <div>
-                <b>3. Inspection and adjustment</b>
-                <p>The camera triggers AWS AI inspection. The result reaches the HMI, QMS, historian, and Cloud Analytics. If the HMI is offline, it misses the direct result and does not publish an adjustment command to Ignition Edge.</p>
+                <div className="workflow-heading">
+                  <b>3. Inspection and adjustment</b>
+                  <div className="workflow-actions">
+                    <Btn sm onClick={publishInspection}>Run once</Btn>
+                    <Btn sm variant={streams.inspection ? "primary" : "ghost"} onClick={() => toggleContinuous("inspection")}>
+                      {streams.inspection ? "Continuous on" : "Continuous"}
+                    </Btn>
+                  </div>
+                </div>
+                <p>The camera triggers AWS AI inspection. The result reaches the HMI, QMS, historian, and Cloud Analytics. The HMI can publish an adjustment command to Ignition Edge; when Cloud Analytics determines maintenance is required, it publishes <code>MaintenanceRequired</code> to CMMS and MES. Offline applications and unavailable mesh paths demonstrate which parts of the workflow buffer and which direct deliveries are missed.</p>
               </div>
               <div>
-                <b>4. Predictive maintenance</b>
-                <p>When Cloud Analytics determines that inspection results require equipment maintenance, it raises <code>MaintenanceRequired</code> for both CMMS and MES. Their queues hold those events while either application—or the Factory–AWS path—is unavailable.</p>
-              </div>
-              <div>
-                <b>5. Cross-region delivery</b>
+                <b>4. Cross-region delivery</b>
                 <p>Disconnect a labeled broker link to see guaranteed inter-broker traffic buffer on the unavailable path, then reconnect it to watch the link queue drain.</p>
               </div>
             </div>
