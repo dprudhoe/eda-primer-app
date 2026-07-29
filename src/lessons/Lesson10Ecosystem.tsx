@@ -98,7 +98,7 @@ type ProducerId = "telemetry" | "workOrders" | "inspection";
 type QueueId = "orders" | "erp" | "quality" | "history" | "rdp" | "ai" | "analytics" | "cmmsRdp";
 type LinkId = "fh" | "fa" | "ha";
 type Tone = "green" | "amber" | "red" | "violet";
-type QueuedDelivery = { to: Pt; eventLabel: string; label: string; tone: Tone; onDelivered?: () => void };
+type QueuedDelivery = { to: Pt; eventLabel: string; tone: Tone; onDelivered?: () => void };
 type BufferedLinkDelivery = { from: Pt; to: Pt; label: string; tone: Tone; onArrive: () => void };
 
 const QUEUE_CONSUMER: Record<QueueId, ConsumerId> = {
@@ -212,7 +212,7 @@ export default function Lesson10Ecosystem() {
     queueDraining.current[id] = true;
     const job = queueJobs.current[id].shift()!;
     setQueueDepths((depths) => ({ ...depths, [id]: Math.max(0, depths[id] - 1) }));
-    emit({ from: QUEUE_POINTS[id], to: job.to, label: job.label, tone: job.tone, duration: 0.75 });
+    emit({ from: QUEUE_POINTS[id], to: job.to, label: job.eventLabel, tone: job.tone, duration: 0.75 });
     later(780, () => job.onDelivered?.());
     later(900, () => {
       queueDraining.current[id] = false;
@@ -268,11 +268,11 @@ export default function Lesson10Ecosystem() {
   const replayRetainedToHmi = (value: number, telemetrySequence: number) => {
     if (telemetrySequence < hmiSequenceRef.current) return;
     hmiSequenceRef.current = telemetrySequence;
-    const reading = `${value.toFixed(1)} °C`;
-    emit({ from: RETAINED, to: F, label: `${reading} · retained`, tone: "amber", duration: 0.65 });
+    const eventLabel = `TemperatureReading ${value.toFixed(1)}°C`;
+    emit({ from: RETAINED, to: F, label: `${eventLabel} · retained`, tone: "amber", duration: 0.65 });
     later(680, () => {
       if (!consumersRef.current.hmi || telemetrySequence < hmiSequenceRef.current) return;
-      emit({ from: F, to: HMI, label: reading, tone: "green", duration: 0.75 });
+      emit({ from: F, to: HMI, label: eventLabel, tone: "green", duration: 0.75 });
     });
     later(1450, () => {
       if (!consumersRef.current.hmi || telemetrySequence !== hmiSequenceRef.current) return;
@@ -330,7 +330,6 @@ export default function Lesson10Ecosystem() {
     enqueue("cmmsRdp", {
       to: CMMS,
       eventLabel: "MaintenanceRequired",
-      label: "HTTP POST",
       tone: "amber",
       onDelivered: () => {
         hop(400, CMMS, A, "MaintenanceScheduled", "amber");
@@ -342,7 +341,6 @@ export default function Lesson10Ecosystem() {
           onArrive: () => enqueue("orders", {
             to: MES,
             eventLabel: "MaintenanceScheduled",
-            label: "scheduled",
             tone: "amber",
           }),
         }));
@@ -357,22 +355,22 @@ export default function Lesson10Ecosystem() {
     const direction = previous >= 73.2 ? -1 : previous <= 71.6 ? 1 : Math.random() < 0.5 ? -1 : 1;
     const change = Math.random() < 0.55 ? 0.1 : 0.2;
     const next = Math.round((previous + direction * change) * 10) / 10;
-    const reading = `${next.toFixed(1)} °C`;
+    const eventLabel = `TemperatureReading ${next.toFixed(1)}°C`;
     telemetryValueRef.current = next;
     setTelemetryValue(next);
 
-    hop(0, PLC, F, reading);
+    hop(0, PLC, F, eventLabel);
     later(750, () => {
       if (!consumersRef.current.hmi || telemetrySequence < hmiSequenceRef.current) return;
       hmiSequenceRef.current = telemetrySequence;
-      emit({ from: F, to: HMI, label: reading, tone: "green", duration: 0.75 });
+      emit({ from: F, to: HMI, label: eventLabel, tone: "green", duration: 0.75 });
       later(770, () => {
         if (!consumersRef.current.hmi || telemetrySequence !== hmiSequenceRef.current) return;
         hmiSequenceRef.current = telemetrySequence;
         setHmiValue(next);
       });
     });
-    hop(750, F, RETAINED, reading, "amber");
+    hop(750, F, RETAINED, eventLabel, "amber");
     later(1520, () => {
       retainedSequenceRef.current = telemetrySequence;
       retainedValueRef.current = next;
@@ -384,22 +382,23 @@ export default function Lesson10Ecosystem() {
     later(750, () => sendAcross("fh", {
       from: F,
       to: H,
-      label: "telemetry",
+      label: eventLabel,
       tone: "green",
-      onArrive: () => enqueue("history", { to: HISTORIAN, eventLabel: "TemperatureReading", label: "store", tone: "green" }),
+      onArrive: () => enqueue("history", { to: HISTORIAN, eventLabel, tone: "green" }),
     }));
   };
 
   const publishVibration = () => {
     if (!producersRef.current.telemetry) return;
     const vibrationSequence = ++sequence.current.vibration;
-    const vibration = `${(2.2 + (vibrationSequence % 7) * 0.3).toFixed(1)} mm/s`;
+    const vibrationValue = (2.2 + (vibrationSequence % 7) * 0.3).toFixed(1);
+    const eventLabel = `VibrationReading ${vibrationValue}mm/s`;
 
-    hop(0, PLC, F, vibration, "violet");
+    hop(0, PLC, F, eventLabel, "violet");
     later(750, () => {
-      if (consumersRef.current.hmi) hop(0, F, HMI, vibration, "violet");
+      if (consumersRef.current.hmi) hop(0, F, HMI, eventLabel, "violet");
       if (consumersRef.current.analyzers) {
-        hop(0, F, ANALYZERS, `VibrationReading ${vibrationSequence}`, "violet");
+        hop(0, F, ANALYZERS, eventLabel, "violet");
         later(780, () => {
           if (!consumersRef.current.analyzers) return;
           const completed = ++vibrationAnalyses.current;
@@ -421,7 +420,6 @@ export default function Lesson10Ecosystem() {
               onArrive: () => enqueue("history", {
                 to: HISTORIAN,
                 eventLabel: "MaintenanceRequired",
-                label: "maintenance",
                 tone: "amber",
               }),
             });
@@ -431,12 +429,11 @@ export default function Lesson10Ecosystem() {
       sendAcross("fh", {
         from: F,
         to: H,
-        label: "vibration",
+        label: eventLabel,
         tone: "violet",
         onArrive: () => enqueue("history", {
           to: HISTORIAN,
-          eventLabel: "VibrationReading",
-          label: "store",
+          eventLabel,
           tone: "violet",
         }),
       });
@@ -446,36 +443,37 @@ export default function Lesson10Ecosystem() {
   const publishWorkOrder = () => {
     if (!producersRef.current.workOrders) return;
     const id = `WO-${String(++sequence.current.workOrder).padStart(2, "0")}`;
-    hop(0, ERP, H, id);
+    const releasedEvent = `WorkOrderReleased ${id}`;
+    const completedEvent = `WorkOrderCompleted ${id}`;
+    hop(0, ERP, H, releasedEvent);
     later(750, () => {
       sendAcross("fh", {
         from: H,
         to: F,
-        label: `${id} · MES`,
+        label: releasedEvent,
         tone: "green",
         onArrive: () => enqueue("orders", {
           to: MES,
-          eventLabel: "WorkOrderReleased",
-          label: "deliver",
+          eventLabel: releasedEvent,
           tone: "green",
           onDelivered: () => {
             // MES finishes the work, then becomes a publisher for downstream outcomes.
-            hop(600, MES, F, `${id} complete`);
+            hop(600, MES, F, completedEvent);
             later(1380, () => sendAcross("fh", {
               from: F,
               to: H,
-              label: "WorkOrderCompleted",
+              label: completedEvent,
               tone: "green",
               onArrive: () => {
-                enqueue("erp", { to: ERP, eventLabel: "WorkOrderCompleted", label: "completed", tone: "green" });
-                enqueue("history", { to: HISTORIAN, eventLabel: "WorkOrderCompleted", label: "archive", tone: "green" });
-                enqueue("rdp", { to: SUPPLY_CHAIN_API, eventLabel: "WorkOrderCompleted", label: "completed", tone: "green" });
+                enqueue("erp", { to: ERP, eventLabel: completedEvent, tone: "green" });
+                enqueue("history", { to: HISTORIAN, eventLabel: completedEvent, tone: "green" });
+                enqueue("rdp", { to: SUPPLY_CHAIN_API, eventLabel: completedEvent, tone: "green" });
               },
             }));
           },
         }),
       });
-      enqueue("rdp", { to: SUPPLY_CHAIN_API, eventLabel: "WorkOrderReleased", label: "HTTP POST", tone: "green" });
+      enqueue("rdp", { to: SUPPLY_CHAIN_API, eventLabel: releasedEvent, tone: "green" });
     });
   };
 
@@ -488,24 +486,24 @@ export default function Lesson10Ecosystem() {
   const publishInspection = () => {
     if (!producersRef.current.inspection) return;
     const id = `INS-${String(++sequence.current.inspection).padStart(2, "0")}`;
-    hop(0, CAMERA, F, id);
+    const requestedEvent = `InspectionRequested ${id}`;
+    const resultEvent = `InspectionResult ${id}`;
+    hop(0, CAMERA, F, requestedEvent);
     later(750, () => sendAcross("fa", {
       from: F,
       to: A,
-      label: "InspectionRequested",
+      label: requestedEvent,
       tone: "violet",
       onArrive: () => enqueue("ai", {
         to: AI,
-        eventLabel: "InspectionRequested",
-        label: "infer",
+        eventLabel: requestedEvent,
         tone: "violet",
         onDelivered: () => {
-          hop(0, AI, A, "InspectionResult", "violet");
+          hop(0, AI, A, resultEvent, "violet");
           later(800, () => {
             enqueue("analytics", {
               to: ANALYTICS,
-              eventLabel: "InspectionResult",
-              label: "deliver",
+              eventLabel: resultEvent,
               tone: "violet",
               onDelivered: () => {
                 const evaluation = ++maintenanceEvaluations.current;
@@ -516,17 +514,17 @@ export default function Lesson10Ecosystem() {
             sendAcross("fa", {
               from: A,
               to: F,
-              label: "InspectionResult",
+              label: resultEvent,
               tone: "violet",
               onArrive: () => {
                 if (!consumersRef.current.hmi) return;
-                hop(0, F, HMI, "result", "violet");
+                hop(0, F, HMI, resultEvent, "violet");
                 later(780, () => {
                   if (!consumersRef.current.hmi) return;
                   // The HMI reacts to the result by publishing a command back through the broker.
                   hop(0, HMI, F, "AdjustmentCommand", "amber");
                   later(780, () => {
-                    hop(0, F, PLC, "apply adjustment", "amber");
+                    hop(0, F, PLC, "AdjustmentCommand", "amber");
                   });
                 });
               },
@@ -534,11 +532,11 @@ export default function Lesson10Ecosystem() {
             sendAcross("ha", {
               from: A,
               to: H,
-              label: "InspectionResult",
+              label: resultEvent,
               tone: "violet",
               onArrive: () => {
-                enqueue("quality", { to: QMS, eventLabel: "InspectionResult", label: "deliver", tone: "violet" });
-                enqueue("history", { to: HISTORIAN, eventLabel: "InspectionResult", label: "store", tone: "violet" });
+                enqueue("quality", { to: QMS, eventLabel: resultEvent, tone: "violet" });
+                enqueue("history", { to: HISTORIAN, eventLabel: resultEvent, tone: "violet" });
               },
             });
           });
@@ -707,19 +705,7 @@ export default function Lesson10Ecosystem() {
               </div>
               <div>
                 <div className="workflow-heading">
-                  <b>2. Vibration monitoring</b>
-                  <div className="workflow-actions">
-                    <Btn sm onClick={publishVibration}>Run once</Btn>
-                    <Btn sm variant={streams.vibration ? "primary" : "ghost"} onClick={() => toggleContinuous("vibration")}>
-                      {streams.vibration ? "Continuous on" : "Continuous"}
-                    </Btn>
-                  </div>
-                </div>
-                <p>Vibration reaches the HMI, historian, and MQTT-connected analyzer directly. The first completed analysis—and every third analysis afterward—publishes <code>MaintenanceRequired</code> to CMMS and the historian; CMMS then publishes <code>MaintenanceScheduled</code> for MES.</p>
-              </div>
-              <div>
-                <div className="workflow-heading">
-                  <b>3. Work-order lifecycle</b>
+                  <b>2. Work-order lifecycle</b>
                   <div className="workflow-actions">
                     <Btn sm onClick={publishWorkOrder}>Run once</Btn>
                     <Btn sm variant={streams.workOrders ? "primary" : "ghost"} onClick={() => toggleContinuous("workOrders")}>
@@ -728,6 +714,18 @@ export default function Lesson10Ecosystem() {
                   </div>
                 </div>
                 <p>ERP publishes a work order to the MES queue and Supply Chain API. MES processes it and publishes <code>WorkOrderCompleted</code> to the ERP queue, Supply Chain API, and the historian. Taking any queued consumer offline demonstrates independent buffering for that application.</p>
+              </div>
+              <div>
+                <div className="workflow-heading">
+                  <b>3. Vibration monitoring</b>
+                  <div className="workflow-actions">
+                    <Btn sm onClick={publishVibration}>Run once</Btn>
+                    <Btn sm variant={streams.vibration ? "primary" : "ghost"} onClick={() => toggleContinuous("vibration")}>
+                      {streams.vibration ? "Continuous on" : "Continuous"}
+                    </Btn>
+                  </div>
+                </div>
+                <p>Vibration reaches the HMI, historian, and MQTT-connected analyzer directly. The first completed analysis—and every third analysis afterward—publishes <code>MaintenanceRequired</code> to CMMS and the historian; CMMS then publishes <code>MaintenanceScheduled</code> for MES.</p>
               </div>
               <div>
                 <div className="workflow-heading">

@@ -242,6 +242,15 @@ export default function Lesson05CompetingConsumers() {
             </div>
           </div>
         </ControlBar>
+
+        <Card title="Try this">
+          <div className="prose" style={{ fontSize: 13 }}>
+            <p><b style={{ color: "var(--green-bright)" }}>Start with one analyzer</b>, publish a burst of 20, and watch the queue absorb work faster than that consumer can process it.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Add the other analyzers</b> while a backlog remains. The queue begins distributing new work across the expanded pool and drains faster.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Give the analyzers different processing times</b>, then publish another burst. The fastest available analyzer naturally completes more windows—distribution is availability-driven, not strict round robin.</p>
+            <p><b style={{ color: "var(--green-bright)" }}>Pause the fastest analyzer</b> during a burst. The remaining consumers continue taking work without any change to the publisher.</p>
+          </div>
+        </Card>
       </div>
 
       <div className="rail">
