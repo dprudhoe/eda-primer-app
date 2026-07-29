@@ -2064,44 +2064,6 @@ select.select-input {
   color: var(--text-mute);
   font-size: 9.5px;
 }
-.contract-example {
-  position: absolute;
-  left: 27%;
-  z-index: 2;
-  display: grid;
-  width: 40%;
-  grid-template-columns: auto 1fr;
-  gap: 3px 7px;
-  align-items: center;
-  padding: 8px 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 7px;
-  background: rgba(8, 30, 49, 0.92);
-}
-.contract-example.state-example {
-  top: 6%;
-}
-.contract-example.event-example {
-  top: 52%;
-}
-.contract-example > span {
-  color: var(--text-mute);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.contract-example code {
-  color: var(--green-bright);
-  font-family: var(--font-mono);
-  font-size: 8.5px;
-  overflow-wrap: anywhere;
-}
-.contract-example small {
-  grid-column: 2;
-  color: var(--text-dim);
-  font-size: 9px;
-}
 .every-event-consumer {
   width: 186px;
   min-height: 118px;
@@ -2244,8 +2206,7 @@ select.select-input {
 }
 .app[data-theme="light"] .stage-card .mesh-caption,
 .app[data-theme="light"] .stage-card .retained-value,
-.app[data-theme="light"] .stage-card .dmq-marker,
-.app[data-theme="light"] .stage-card .contract-example {
+.app[data-theme="light"] .stage-card .dmq-marker {
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 5px 14px rgba(32, 69, 82, 0.08);
 }
