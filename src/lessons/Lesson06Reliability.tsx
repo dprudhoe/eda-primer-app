@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Anchored,
+  Broker,
   Btn,
   Card,
   ControlBar,
@@ -28,10 +29,19 @@ type Msg = {
 };
 type Dead = { id: number; label: string; reason: string };
 
-const QUEUE: Pt = { x: 17, y: 40 };
-const CONSUMER: Pt = { x: 52, y: 40 };
-const DMQ: Pt = { x: 84, y: 40 };
-const DB: Pt = { x: 52, y: 84 };
+function compactDeadReason(reason: string) {
+  if (reason.startsWith("TTL")) return { label: "⏱ TTL", kind: "ttl" };
+  if (reason.startsWith("Rejected")) return { label: "✕ Rejected", kind: "rejected" };
+  const retries = reason.match(/\((\d+)\)/)?.[1] ?? "0";
+  return { label: `${retries}/${retries}`, kind: "retry" };
+}
+
+const PUBLISHER: Pt = { x: 7, y: 42 };
+const HUB: Pt = { x: 22, y: 42 };
+const QUEUE: Pt = { x: 40, y: 42 };
+const CONSUMER: Pt = { x: 64, y: 42 };
+const DMQ: Pt = { x: 87, y: 42 };
+const DB: Pt = { x: 64, y: 84 };
 const DELIVERY_MS = 600;
 const PROCESS_MS = 900;
 let mId = 1;
@@ -75,10 +85,17 @@ export default function Lesson06Reliability() {
 
   const add = (kind: Kind, label: string) => {
     const now = Date.now();
-    setQueue((q) => [
-      ...q,
-      { id: mId++, label, kind, deliveries: 0, bornAt: now, nextEligibleAt: now, ttlSec: refs.current.ttlSec },
-    ]);
+    const message = { id: mId++, label, kind, deliveries: 0, bornAt: now, nextEligibleAt: now, ttlSec: refs.current.ttlSec };
+    const activeGeneration = flowGeneration.current;
+    emit({ from: PUBLISHER, to: HUB, tone: kind === "perm" ? "red" : "green", label, duration: 0.5 });
+    laterTimer(520, () => {
+      if (flowGeneration.current !== activeGeneration) return;
+      emit({ from: HUB, to: QUEUE, tone: kind === "perm" ? "red" : "green", label, duration: 0.5 });
+    });
+    laterTimer(1040, () => {
+      if (flowGeneration.current !== activeGeneration) return;
+      setQueue((q) => [...q, message]);
+    });
   };
 
   useEffect(() => {
@@ -238,49 +255,72 @@ export default function Lesson06Reliability() {
     <div className="lesson-layout">
       <div>
         <Stage
-          note="A valid BOM update is applied by the MES. A temporary processing error triggers retries; a malformed update fails permanently. Whichever limit hits first — max retries, Time to Live (TTL), or a hard rejection — routes the message to the Dead Message Queue."
+          note="ERP publishes each BOM update through Solace into a durable queue. A temporary MES processing error triggers retries; a malformed update fails permanently. Whichever limit hits first — max retries, Time to Live (TTL), or a hard rejection — routes the message to the Dead Message Queue."
           minHeight={420}
         >
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <line className="flow-line active" x1={PUBLISHER.x} y1={PUBLISHER.y} x2={HUB.x} y2={HUB.y} vectorEffect="non-scaling-stroke" />
+            <line className="flow-line active" x1={HUB.x} y1={HUB.y} x2={QUEUE.x} y2={QUEUE.y} vectorEffect="non-scaling-stroke" />
             <line className="flow-line active" x1={QUEUE.x} y1={QUEUE.y} x2={CONSUMER.x} y2={CONSUMER.y} vectorEffect="non-scaling-stroke" />
             <line className={`flow-line ${dmqEnabled ? "dead" : ""}`} x1={CONSUMER.x} y1={CONSUMER.y} x2={DMQ.x} y2={DMQ.y} vectorEffect="non-scaling-stroke" />
             <line className={`flow-line ${processingErrorVisible ? "dead" : "active"}`} x1={CONSUMER.x} y1={CONSUMER.y} x2={DB.x} y2={DB.y} vectorEffect="non-scaling-stroke" />
           </svg>
 
+          <Anchored pt={PUBLISHER}>
+            <Node
+              icon="▣"
+              name="ERP"
+              role="BOM publisher"
+              accent="green"
+              style={{ width: 142, minWidth: 142, padding: "8px 10px" }}
+            />
+          </Anchored>
+
+          <Anchored pt={HUB}>
+            <Broker small active={flyers.some((f) => f.to.x === HUB.x && f.to.y === HUB.y)} />
+          </Anchored>
+
           <Anchored pt={QUEUE}>
-            <div className="queue" style={{ minWidth: 186 }}>
+            <div className="queue reliability-queue" style={{ minWidth: 186 }}>
               <div className="queue-head">
                 <span className="queue-name">BOM Updates</span>
                 <span className="queue-depth">{queue.length}</span>
               </div>
-              <div className="queue-slots" style={{ height: 168, overflowY: "auto" }}>
-                <AnimatePresence initial={false}>
-                  {queue.length === 0 ? (
-                    <div className="queue-empty" key="e">empty</div>
-                  ) : (
-                    queue.map((m) => {
-                      const ttlLeft = m.ttlSec > 0 ? Math.max(0, m.ttlSec - (now - m.bornAt) / 1000) : null;
-                      const waiting = m.nextEligibleAt > now;
-                      return (
-                        <motion.div
-                          key={m.id}
-                          layout
-                          initial={{ opacity: 0, y: -8 }}
-                          animate={{ opacity: proc?.id === m.id ? 1 : waiting ? 0.55 : 1, y: 0 }}
-                          exit={{ opacity: 0, x: 20 }}
-                          className="queue-msg"
-                          style={{ borderColor: m.kind === "perm" ? "rgba(239,90,106,0.5)" : undefined }}
-                        >
-                          <span>{m.label}</span>
-                          <span style={{ display: "flex", gap: 6 }}>
-                            {m.deliveries > 0 ? <span className="ttl retry">⟳{m.deliveries}/{maxRetries}</span> : null}
-                            {ttlLeft != null ? <span className="ttl">⏱{ttlLeft.toFixed(0)}s</span> : null}
-                          </span>
-                        </motion.div>
-                      );
-                    })
-                  )}
-                </AnimatePresence>
+              <div className="reliability-queue-body">
+                <div className="qcells reliability-queue-meter" aria-hidden="true">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <span key={i} className="qcell" style={i < Math.min(queue.length, 5) ? { background: "var(--green)", boxShadow: "0 0 6px var(--green)" } : undefined} />
+                  ))}
+                </div>
+                <div className="queue-slots" style={{ height: 208, overflowY: "auto" }}>
+                  <AnimatePresence initial={false}>
+                    {queue.length === 0 ? (
+                      <div className="queue-empty" key="e">empty</div>
+                    ) : (
+                      queue.map((m) => {
+                        const ttlLeft = m.ttlSec > 0 ? Math.max(0, m.ttlSec - (now - m.bornAt) / 1000) : null;
+                        const waiting = m.nextEligibleAt > now;
+                        return (
+                          <motion.div
+                            key={m.id}
+                            layout
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: proc?.id === m.id ? 1 : waiting ? 0.55 : 1, y: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="queue-msg"
+                            style={{ borderColor: m.kind === "perm" ? "rgba(239,90,106,0.5)" : undefined }}
+                          >
+                            <span>{m.label}</span>
+                            <span style={{ display: "flex", gap: 6 }}>
+                              {m.deliveries > 0 ? <span className="ttl retry">⟳{m.deliveries}/{maxRetries}</span> : null}
+                              {ttlLeft != null ? <span className="ttl">⏱{ttlLeft.toFixed(0)}s</span> : null}
+                            </span>
+                          </motion.div>
+                        );
+                      })
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           </Anchored>
@@ -305,24 +345,34 @@ export default function Lesson06Reliability() {
           </Anchored>
 
           <Anchored pt={DMQ}>
-            <div className="queue" style={{ minWidth: 176, borderColor: "rgba(239,90,106,0.4)" }}>
+            <div className="queue reliability-queue reliability-queue-dmq" style={{ width: 220, minWidth: 220 }}>
               <div className="queue-head">
                 <span className="queue-name" style={{ color: "var(--red)" }}>Dead Message Queue</span>
                 <span className="queue-depth" style={{ color: "var(--red)", background: "rgba(239,90,106,0.12)" }}>{dmq.length}</span>
               </div>
-              <div className="queue-slots" style={{ height: 168, overflowY: "auto" }}>
-                {!dmqEnabled ? (
-                  <div className="queue-empty">DMQ disabled</div>
-                ) : dmq.length === 0 ? (
-                  <div className="queue-empty">empty</div>
-                ) : (
-                  dmq.map((d) => (
-                    <div className="queue-msg" key={d.id} style={{ flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
-                      <span>{d.label}</span>
-                      <span style={{ fontSize: 9.5, color: "var(--red)" }}>{d.reason}</span>
-                    </div>
-                  ))
-                )}
+              <div className="reliability-queue-body">
+                <div className="qcells reliability-queue-meter" aria-hidden="true">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <span key={i} className="qcell" style={i < Math.min(dmq.length, 5) ? { background: "var(--red)", boxShadow: "0 0 6px var(--red)" } : undefined} />
+                  ))}
+                </div>
+                <div className="queue-slots" style={{ height: 208, overflowY: "auto" }}>
+                  {!dmqEnabled ? (
+                    <div className="queue-empty">DMQ disabled</div>
+                  ) : dmq.length === 0 ? (
+                    <div className="queue-empty">empty</div>
+                  ) : (
+                    dmq.map((d) => {
+                      const marker = compactDeadReason(d.reason);
+                      return (
+                        <div className="queue-msg" key={d.id} title={d.reason}>
+                          <span>{d.label}</span>
+                          <span className={`dmq-reason dmq-reason-${marker.kind}`}>{marker.label}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
           </Anchored>

@@ -11,26 +11,21 @@ import {
   MsgToken,
   Node,
   Particle,
-  Prediction,
   Stage,
   Toggle,
 } from "../components/kit";
 import { useFlow, Pt } from "../components/useFlow";
 
-const MES: Pt = { x: 13, y: 30 };
-const HUB: Pt = { x: 42, y: 30 };
-const CONSUMER: Pt = { x: 86, y: 30 };
-const DB: Pt = { x: 86, y: 82 };
+const MES: Pt = { x: 10, y: 49 };
+const HUB: Pt = { x: 31, y: 49 };
+const MQTT_QUEUE: Pt = { x: 51, y: 24 };
+const MQTT_CONSUMER: Pt = { x: 70, y: 24 };
+const MQTT_DB: Pt = { x: 90, y: 24 };
+const QUEUE: Pt = { x: 51, y: 74 };
+const QUEUE_CONSUMER: Pt = { x: 70, y: 74 };
+const QUEUE_DB: Pt = { x: 90, y: 74 };
 
 type Status = "pending" | "ok" | "fail";
-const STEP_LABELS = [
-  "Message published",
-  "Broker accepted message",
-  "Consumer received message",
-  "Transport acknowledgment completed",
-  "Database updated",
-  "Business transaction completed",
-];
 
 export default function Lesson03QoS() {
   const { flyers, emit, remove } = useFlow();
@@ -39,9 +34,15 @@ export default function Lesson03QoS() {
   const [steps, setSteps] = useState<Status[]>(Array(6).fill("pending"));
   const [running, setRunning] = useState(false);
   const [dbBusy, setDbBusy] = useState(false);
+  const [queueBusy, setQueueBusy] = useState(false);
+  const [mqttDepth, setMqttDepth] = useState(0);
+  const [mqttStatus, setMqttStatus] = useState("Ready");
+  const [queueDepth, setQueueDepth] = useState(0);
+  const [queueStatus, setQueueStatus] = useState("Ready");
   const [, force] = useState(0);
 
   const m = useRef({ stage: 0, at: 0, active: false, dbEmitted: false });
+  const q = useRef({ stage: 0, at: 0, active: false, dbEmitted: false });
   const dbUpRef = useRef(dbUp);
   const consumerUpRef = useRef(consumerUp);
   dbUpRef.current = dbUp;
@@ -52,48 +53,138 @@ export default function Lesson03QoS() {
   useEffect(() => {
     const iv = window.setInterval(() => {
       const mm = m.current;
-      if (!mm.active) return;
+      const qq = q.current;
+      if (!mm.active && !qq.active) return;
       const now = Date.now();
-      const el = now - mm.at;
-      const adv = (s: number) => { mm.stage = s; mm.at = now; };
       force((n) => n + 1);
-      switch (mm.stage) {
-        case 0: // published → broker accepted
-          if (el >= 700) { setStep(0, "ok"); setStep(1, "ok"); adv(1); }
-          break;
-        case 1: // held at broker (QoS 1) until the consumer is online
-          if (consumerUpRef.current) {
-            emit({ from: HUB, to: CONSUMER, tone: "green", label: "WorkOrderReleased", duration: 0.9 });
-            adv(2);
-          }
-          break;
-        case 2: // delivering to consumer
-          if (el >= 850) {
-            setStep(2, "ok");
-            emit({ from: CONSUMER, to: HUB, tone: "violet", label: "✓ ACK", duration: 1.05 });
-            adv(3);
-          }
-          break;
-        case 3: // transport ack
-          if (el >= 800) { setStep(3, "ok"); adv(4); }
-          break;
-        case 4: // database write
-          if (!mm.dbEmitted) {
-            mm.dbEmitted = true;
-            setDbBusy(true);
-            emit({ from: CONSUMER, to: DB, tone: dbUpRef.current ? "green" : "red", label: "INSERT work_order", duration: 0.9 });
-          }
-          if (el >= 950) {
-            const ok = dbUpRef.current;
-            setStep(4, ok ? "ok" : "fail");
-            setStep(5, ok ? "ok" : "fail");
-            setDbBusy(false);
-            mm.active = false;
-            adv(5);
-            setRunning(false);
-          }
-          break;
+      if (mm.active) {
+        const el = now - mm.at;
+        const adv = (s: number) => { mm.stage = s; mm.at = now; };
+        switch (mm.stage) {
+          case 0:
+            if (el >= 700) {
+              setStep(0, "ok");
+              setStep(1, "ok");
+              setMqttStatus("Enqueuing");
+              emit({ from: HUB, to: MQTT_QUEUE, tone: "violet", label: "WorkOrderReleased", duration: 0.8 });
+              adv(1);
+            }
+            break;
+          case 1:
+            if (el >= 800) {
+              setMqttDepth(1);
+              setMqttStatus("Queued");
+              adv(2);
+            }
+            break;
+          case 2:
+            if (el >= 350 && consumerUpRef.current) {
+              emit({ from: MQTT_QUEUE, to: MQTT_CONSUMER, tone: "violet", label: "WorkOrderReleased", duration: 0.85 });
+              setMqttStatus("Delivering");
+              adv(3);
+            }
+            break;
+          case 3:
+            if (el >= 850) {
+              setStep(2, "ok");
+              setMqttDepth(0);
+              setMqttStatus("Delivered · awaiting PUBACK");
+              emit({ from: MQTT_CONSUMER, to: MQTT_QUEUE, tone: "violet", label: "✓ PUBACK", duration: 0.7 });
+              setDbBusy(true);
+              emit({ from: MQTT_CONSUMER, to: MQTT_DB, tone: dbUpRef.current ? "green" : "red", label: "Process", duration: 0.8 });
+              adv(4);
+            }
+            break;
+          case 4:
+            if (el >= 700) {
+              setStep(3, "ok");
+              setMqttStatus("Dequeued on PUBACK");
+              adv(5);
+            }
+            break;
+          case 5:
+            if (el >= 150) {
+              const ok = dbUpRef.current;
+              setStep(4, ok ? "ok" : "fail");
+              setStep(5, ok ? "ok" : "fail");
+              setMqttStatus(ok ? "Processed" : "Processing failed · message gone");
+              setDbBusy(false);
+              mm.active = false;
+            }
+            break;
+        }
       }
+
+      if (qq.active) {
+        const el = now - qq.at;
+        const adv = (s: number) => { qq.stage = s; qq.at = now; };
+        switch (qq.stage) {
+          case 0:
+            if (el >= 700) {
+              setQueueStatus("Enqueuing");
+              emit({ from: HUB, to: QUEUE, tone: "green", label: "WorkOrderReleased", duration: 0.8 });
+              adv(1);
+            }
+            break;
+          case 1:
+            if (el >= 800) {
+              setQueueDepth(1);
+              setQueueStatus("Queued");
+              adv(2);
+            }
+            break;
+          case 2:
+            if (el >= 350 && consumerUpRef.current) {
+              emit({ from: QUEUE, to: QUEUE_CONSUMER, tone: "green", label: "WorkOrderReleased", duration: 0.85 });
+              setQueueStatus("Delivering · unsettled");
+              adv(3);
+            }
+            break;
+          case 3:
+            if (el >= 850) {
+              setQueueBusy(true);
+              setQueueStatus("Processing · unsettled");
+              emit({ from: QUEUE_CONSUMER, to: QUEUE_DB, tone: dbUpRef.current ? "green" : "red", label: "Process", duration: 0.8 });
+              adv(4);
+            }
+            break;
+          case 4:
+            if (el >= 850) {
+              setQueueBusy(false);
+              if (dbUpRef.current) {
+                emit({ from: QUEUE_CONSUMER, to: QUEUE, tone: "green", label: "✓ ACCEPTED", duration: 0.7 });
+                setQueueStatus("Processed · accepted");
+                adv(5);
+              } else {
+                emit({ from: QUEUE_CONSUMER, to: QUEUE, tone: "amber", label: "↩ FAILED", duration: 0.7 });
+                setQueueStatus("Processing failed · returning");
+                adv(5);
+              }
+            }
+            break;
+          case 5:
+            if (el >= 700) {
+              if (dbUpRef.current) {
+                setQueueDepth(0);
+                setQueueStatus("Settled · removed");
+                qq.active = false;
+              } else {
+                setQueueDepth(1);
+                setQueueStatus("Held for redelivery");
+                adv(6);
+              }
+            }
+            break;
+          case 6:
+            if (dbUpRef.current) {
+              setQueueStatus("Redelivering");
+              adv(2);
+            }
+            break;
+        }
+      }
+
+      if (!m.current.active && !q.current.active) setRunning(false);
     }, 150);
     return () => window.clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,12 +195,17 @@ export default function Lesson03QoS() {
     setSteps(Array(6).fill("pending"));
     setRunning(true);
     setDbBusy(false);
+    setQueueBusy(false);
+    setMqttDepth(0);
+    setMqttStatus("Publishing");
+    setQueueDepth(0);
+    setQueueStatus("Publishing");
     m.current = { stage: 0, at: Date.now(), active: true, dbEmitted: false };
+    q.current = { stage: 0, at: Date.now(), active: true, dbEmitted: false };
     emit({ from: MES, to: HUB, tone: "green", label: "WorkOrderReleased", duration: 0.7 });
   };
 
-  const awaitingAck = running && m.current.stage >= 1 && m.current.stage <= 3;
-  const heldOffline = running && m.current.stage === 1 && !consumerUp;
+  const heldOffline = running && m.current.stage === 2 && !consumerUp;
   const businessOk = steps[5] === "ok";
   const businessFail = steps[5] === "fail";
 
@@ -119,49 +215,86 @@ export default function Lesson03QoS() {
     ? "Transport succeeded at every layer — yet the business transaction failed. QoS delivered the bytes; it can't commit your database."
     : businessOk
     ? "Delivery and processing both succeeded — two separate outcomes on the timeline."
-    : "Publish a work order. Toggle the consumer offline to see QoS 1 hold the message; toggle the database offline to see business processing fail after a successful delivery.";
+    : "Take the database offline, then publish. MQTT acknowledges delivery before processing fails; the queue-backed consumer returns the unsettled message and retries when the database recovers.";
 
   return (
     <div className="lesson-layout">
       <div>
-        <Stage note={note} minHeight={400}>
+        <Stage note={note} minHeight={540}>
           <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
             <line className="flow-line active" x1={MES.x} y1={MES.y} x2={HUB.x} y2={HUB.y} vectorEffect="non-scaling-stroke" />
-            <line className={`flow-line ${consumerUp ? "active" : "dead"}`} x1={HUB.x} y1={HUB.y} x2={CONSUMER.x} y2={CONSUMER.y} vectorEffect="non-scaling-stroke" />
-            <line className={`flow-line ${dbUp ? "active" : "dead"}`} x1={CONSUMER.x} y1={CONSUMER.y} x2={DB.x} y2={DB.y} vectorEffect="non-scaling-stroke" />
+            <line className="flow-line active" x1={HUB.x} y1={HUB.y} x2={MQTT_QUEUE.x} y2={MQTT_QUEUE.y} vectorEffect="non-scaling-stroke" />
+            <line className={`flow-line ${consumerUp ? "active" : "dead"}`} x1={MQTT_QUEUE.x} y1={MQTT_QUEUE.y} x2={MQTT_CONSUMER.x} y2={MQTT_CONSUMER.y} vectorEffect="non-scaling-stroke" />
+            <line className={`flow-line ${dbUp ? "active" : "dead"}`} x1={MQTT_CONSUMER.x} y1={MQTT_CONSUMER.y} x2={MQTT_DB.x} y2={MQTT_DB.y} vectorEffect="non-scaling-stroke" />
+            <line className="flow-line active" x1={HUB.x} y1={HUB.y} x2={QUEUE.x} y2={QUEUE.y} vectorEffect="non-scaling-stroke" />
+            <line className={`flow-line ${consumerUp ? "active" : "dead"}`} x1={QUEUE.x} y1={QUEUE.y} x2={QUEUE_CONSUMER.x} y2={QUEUE_CONSUMER.y} vectorEffect="non-scaling-stroke" />
+            <line className={`flow-line ${dbUp ? "active" : "dead"}`} x1={QUEUE_CONSUMER.x} y1={QUEUE_CONSUMER.y} x2={QUEUE_DB.x} y2={QUEUE_DB.y} vectorEffect="non-scaling-stroke" />
           </svg>
 
           <Anchored pt={MES}>
-            <Node icon="▣" name="MES" role="Publisher · QoS 1" accent="green" sub="releases work orders" />
+            <Node icon="▣" name="MES" role="Publisher" accent="green" sub="same event · two models" />
           </Anchored>
           <Anchored pt={HUB}>
             <Broker active={running} />
           </Anchored>
-          {awaitingAck ? (
-            <Anchored pt={{ x: 42, y: 52 }}>
-              <div className="qchip" style={{ minWidth: 108 }}>
-                <span className="qchip-label">QoS 1 · awaiting ack</span>
-                <MsgToken label="1 held" tone={heldOffline ? "amber" : "violet"} />
-              </div>
-            </Anchored>
-          ) : null}
-          <Anchored pt={CONSUMER}>
+          <Anchored pt={{ x: 50, y: 8 }}>
+            <div className="flow-lane-label">MQTT QoS 1 · receipt acknowledged</div>
+          </Anchored>
+          <Anchored pt={{ x: 51, y: 60 }}>
+            <div className="flow-lane-label">Queue-backed settlement · AMQP / SMF</div>
+          </Anchored>
+          <Anchored pt={MQTT_QUEUE}>
+            <div className={`qchip queue-settlement mqtt-session-queue ${mqttDepth ? "has-message" : ""}`}>
+              <span className="qchip-label">MQTT SESSION QUEUE</span>
+              <MsgToken label={`${mqttDepth} queued`} tone={mqttDepth ? (heldOffline ? "amber" : "violet") : "violet"} />
+            </div>
+          </Anchored>
+          <Anchored pt={MQTT_CONSUMER}>
             <Node
               icon="◉"
-              name="Line Execution System"
-              role="Consumer"
+              name="MQTT Consumer"
+              role="QoS 1"
               accent={!consumerUp ? "slate" : businessFail ? "red" : "cyan"}
-              sub={!consumerUp ? "offline" : dbBusy ? "writing to database…" : businessFail ? "processing failed" : businessOk ? "committed" : "idle"}
+              sub={!consumerUp ? "offline" : dbBusy ? "processing…" : mqttStatus}
               lit={running && consumerUp}
               offline={!consumerUp}
               badge={consumerUp ? undefined : { text: "Offline", kind: "off" }}
             />
           </Anchored>
-          <Anchored pt={DB}>
+          <Anchored pt={MQTT_DB}>
             <Node
               icon="▤"
               name="Order Database"
               role="System of record"
+              accent={dbUp ? "green" : "red"}
+              badge={dbUp ? { text: "Online", kind: "ok" } : { text: "Offline", kind: "err" }}
+              sub={dbUp ? "accepting writes" : "connection refused"}
+              offline={!dbUp}
+            />
+          </Anchored>
+          <Anchored pt={QUEUE}>
+            <div className={`qchip queue-settlement ${queueDepth ? "has-message" : ""}`}>
+              <span className="qchip-label">WORK ORDER QUEUE</span>
+              <MsgToken label={`${queueDepth} queued`} tone={queueDepth ? "amber" : "green"} />
+            </div>
+          </Anchored>
+          <Anchored pt={QUEUE_CONSUMER}>
+            <Node
+              icon="◉"
+              name="Queue Consumer"
+              role="AMQP / SMF"
+              accent={queueStatus.includes("failed") || queueStatus.includes("Held") ? "amber" : "green"}
+              sub={queueBusy ? "processing · unsettled" : queueStatus}
+              lit={queueBusy}
+              offline={!consumerUp}
+              badge={consumerUp ? undefined : { text: "Offline", kind: "off" }}
+            />
+          </Anchored>
+          <Anchored pt={QUEUE_DB}>
+            <Node
+              icon="▤"
+              name="Order Database"
+              role="Same system of record"
               accent={dbUp ? "green" : "red"}
               badge={dbUp ? { text: "Online", kind: "ok" } : { text: "Offline", kind: "err" }}
               sub={dbUp ? "accepting writes" : "connection refused"}
@@ -187,24 +320,27 @@ export default function Lesson03QoS() {
                 </Btn>
               </ControlGroup>
               <ControlGroup label="Environment">
-                <Toggle checked={consumerUp} onChange={setConsumerUp} label="Consumer online" />
+                <Toggle checked={consumerUp} onChange={setConsumerUp} label="Consumers online" />
                 <Toggle checked={dbUp} onChange={setDbUp} label="Database online" />
               </ControlGroup>
             </div>
           </ControlBar>
 
-          <Card title="Delivery vs. business outcome" className="activity-card outcome-card">
-            <div className="timeline">
-              {STEP_LABELS.map((label, i) => {
-                const s = steps[i];
-                return (
-                  <div className="timeline-row" key={i}>
-                    <div className={`timeline-icon ${s}`}>{s === "ok" ? "✓" : s === "fail" ? "✕" : i + 1}</div>
-                    <div className="timeline-label">{label}</div>
-                    <span className={`timeline-status ${s}`}>{s === "ok" ? "Success" : s === "fail" ? "Failed" : "—"}</span>
-                  </div>
-                );
-              })}
+          <Card title="Try this">
+            <div className="prose guided-steps">
+              <p>
+                <b>1.</b> Publish with everything online. Both delivery models successfully process
+                the work order.
+              </p>
+              <p>
+                <b>2.</b> Take the consumers offline and publish again. Both queues hold the message
+                until the consumers reconnect.
+              </p>
+              <p>
+                <b>3.</b> Take only the database offline and publish. MQTT removes its copy after
+                PUBACK; the application-settled queue retains its copy and retries when processing
+                becomes available.
+              </p>
             </div>
           </Card>
         </div>
@@ -214,34 +350,20 @@ export default function Lesson03QoS() {
         <Card title="Scenario">
           <div className="prose">
             <p>
-              An MES publishes a work order with MQTT QoS 1. Follow it through the broker,
-              consumer, and database to compare successful message delivery with successful
-              business processing.
+              An MES publishes the same work order through two delivery models. Take the database
+              offline to compare MQTT QoS 1 receipt with queue-backed application settlement.
             </p>
           </div>
         </Card>
-
-        <Prediction
-          question="The broker accepted the message and the consumer acknowledged it (QoS 1). Was the work order successfully processed?"
-          choices={[
-            { id: "a", text: "Yes — a successful ack means it's done" },
-            { id: "b", text: "Not necessarily — delivery and processing are different", correct: true },
-          ]}
-          reveal={
-            <>
-              <b>Not necessarily.</b> QoS 1 reliably gets the message to the consumer — it will even
-              hold and redeliver if the consumer is offline. But it says nothing about whether the
-              consumer's database write — the actual business outcome — succeeded.
-            </>
-          }
-        />
 
         <InsightCard
           items={[
             "MQTT QoS provides transport-level assurance.",
             "QoS 1 will hold and redeliver to a consumer that was offline — the message isn't lost.",
             "But a transport ack does not prove business processing completed.",
-            "Application-managed recovery is required when processing fails after delivery.",
+            "MQTT is commonly used for live telemetry and state updates; processing-critical transactions often benefit from queue-backed application settlement.",
+            "A queue-backed consumer can settle only after processing succeeds.",
+            "Failed processing returns the message to the queue for broker-managed redelivery.",
           ]}
         />
       </div>

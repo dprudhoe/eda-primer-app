@@ -1409,6 +1409,83 @@ select {
   background: rgba(255, 255, 255, 0.04);
   transition: background 0.2s, box-shadow 0.2s;
 }
+
+.reliability-queue {
+  gap: 7px;
+  padding: 8px;
+  border-style: dashed;
+  border-color: var(--line-strong);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.reliability-queue .queue-head {
+  justify-content: flex-start;
+}
+
+.reliability-queue .queue-name {
+  flex: 1;
+  align-self: center;
+}
+
+.reliability-queue .queue-depth {
+  align-self: center;
+}
+
+.reliability-queue .queue-slots {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.reliability-queue-body {
+  display: flex;
+  align-items: stretch;
+  gap: 7px;
+}
+
+.reliability-queue-meter {
+  flex: 0 0 auto;
+  justify-content: flex-start;
+  gap: 5px;
+  padding: 9px 0;
+}
+
+.reliability-queue-meter .qcell {
+  width: 27px;
+  height: 34px;
+}
+
+.reliability-queue .queue-msg {
+  min-height: 34px;
+  box-sizing: border-box;
+}
+
+.reliability-queue .queue-msg > span:first-child,
+.reliability-queue-dmq .queue-name {
+  white-space: nowrap;
+}
+
+.dmq-reason {
+  flex: 0 0 auto;
+  padding: 1px 4px;
+  border: 1px solid color-mix(in srgb, var(--red) 42%, transparent);
+  border-radius: 4px;
+  color: var(--red);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.dmq-reason-ttl {
+  border-color: color-mix(in srgb, var(--amber) 48%, transparent);
+  color: var(--amber);
+}
+
+.reliability-queue-dmq {
+  border-color: color-mix(in srgb, var(--red) 55%, transparent);
+}
 .toggle.disabled,
 .slider-field:has(input:disabled) {
   opacity: 0.45;
@@ -2490,4 +2567,31 @@ select.select-input {
   .mesh-caption {
     font-size: 9.5px;
   }
+}
+.flow-lane-label {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.queue-settlement {
+  min-width: 126px;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.queue-settlement.has-message {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--amber) 13%, transparent);
+}
+
+.mqtt-session-queue.has-message {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 13%, transparent);
 }
