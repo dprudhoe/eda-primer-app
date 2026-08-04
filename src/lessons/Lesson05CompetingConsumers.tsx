@@ -12,9 +12,9 @@ import {
   Node,
   Particle,
   Prediction,
+  QueueChip,
   Slider,
   Stage,
-  StatPill,
 } from "../components/kit";
 import { useFlow, Pt } from "../components/useFlow";
 
@@ -53,11 +53,7 @@ function workerPt(i: number, n: number): Pt {
 export default function Lesson05CompetingConsumers() {
   const { flyers, emit, remove } = useFlow();
   const [queue, setQueue] = useState<AnalysisMsg[]>([]);
-  const [workers, setWorkers] = useState<Worker[]>(() => [
-    makeWorker("Analyzer A", 1200),
-    makeWorker("Analyzer B", 1200),
-    makeWorker("Analyzer C", 1600),
-  ]);
+  const [workers, setWorkers] = useState<Worker[]>(() => [makeWorker("Analyzer A", 1200)]);
 
   const queueRef = useRef(queue);
   const workersRef = useRef(workers);
@@ -121,7 +117,6 @@ export default function Lesson05CompetingConsumers() {
   const togglePause = (id: number) => setWorkers((ws) => ws.map((w) => (w.id === id ? { ...w, paused: !w.paused } : w)));
   const setSpeed = (id: number, speedMs: number) => setWorkers((ws) => ws.map((w) => (w.id === id ? { ...w, speedMs } : w)));
 
-  const totalProcessed = workers.reduce((a, w) => a + w.processed, 0);
   const n = workers.length;
 
   return (
@@ -165,26 +160,7 @@ export default function Lesson05CompetingConsumers() {
           </Anchored>
 
           <Anchored pt={QUEUE}>
-            <div className="queue" style={{ minWidth: 210 }}>
-              <div className="queue-head">
-                <span className="queue-name">Vibration Analysis Queue</span>
-                <span className="queue-depth">{queue.length}</span>
-              </div>
-              <div className="queue-slots" style={{ maxHeight: 150, overflow: "hidden" }}>
-                {queue.length === 0 ? (
-                  <div className="queue-empty">empty</div>
-                ) : (
-                  queue.slice(0, 6).map((m) => (
-                    <div className="queue-msg" key={m.id}>
-                      <span>{m.label}</span>
-                    </div>
-                  ))
-                )}
-                {queue.length > 6 ? (
-                  <div className="queue-empty">+{queue.length - 6} more…</div>
-                ) : null}
-              </div>
-            </div>
+            <QueueChip depth={queue.length} label="Queue" cap={6} tone="green" />
           </Anchored>
 
           {workers.map((w, i) => (
@@ -212,45 +188,44 @@ export default function Lesson05CompetingConsumers() {
           </AnimatePresence>
         </Stage>
 
-        <ControlBar>
-          <div className="control-row">
-            <ControlGroup label="Publish vibration windows">
-              <Btn variant="primary" onClick={() => publish(1)}>
-                Add 1 window
-              </Btn>
-              <Btn onClick={() => publish(10)}>Add burst of 10</Btn>
-              <Btn onClick={() => publish(20)}>Add burst of 20</Btn>
-            </ControlGroup>
-            <ControlGroup label="Analyzers (0–3)">
-              <Btn onClick={addWorker} disabled={n >= 3}>
-                + Add analyzer
-              </Btn>
-              <Btn onClick={removeWorker} disabled={n <= 0}>
-                – Remove analyzer
-              </Btn>
-            </ControlGroup>
-            <StatPill label="Total analyzed" value={totalProcessed} tone="green" />
-          </div>
-          <div className="control-row">
-            <div className="inspector-speed-grid">
-              {workers.map((w) => (
-                <ControlGroup key={w.id} label={w.name}>
-                  <Slider label="speed" value={w.speedMs} min={500} max={2600} step={100} unit="ms" onChange={(v) => setSpeed(w.id, v)} />
-                  <Btn sm onClick={() => togglePause(w.id)}>{w.paused ? "Resume" : "Pause"}</Btn>
-                </ControlGroup>
-              ))}
+        <div className="control-stack">
+          <ControlBar>
+            <div className="control-row">
+              <ControlGroup label="Publish vibration windows">
+                <Btn variant="primary" onClick={() => publish(1)}>Publish 1</Btn>
+                <Btn onClick={() => publish(10)}>Publish 10</Btn>
+                <Btn onClick={() => publish(20)}>Publish 20</Btn>
+              </ControlGroup>
+              <ControlGroup label="Analyzers (0–3)">
+                <Btn onClick={addWorker} disabled={n >= 3}>
+                  + Add analyzer
+                </Btn>
+                <Btn onClick={removeWorker} disabled={n <= 0}>
+                  – Remove analyzer
+                </Btn>
+              </ControlGroup>
             </div>
-          </div>
-        </ControlBar>
+            <div className="control-row">
+              <div className="inspector-speed-grid">
+                {workers.map((w) => (
+                  <ControlGroup key={w.id} label={w.name}>
+                    <Slider label="speed" value={w.speedMs} min={500} max={2600} step={100} unit="ms" onChange={(v) => setSpeed(w.id, v)} />
+                    <Btn sm onClick={() => togglePause(w.id)}>{w.paused ? "Resume" : "Pause"}</Btn>
+                  </ControlGroup>
+                ))}
+              </div>
+            </div>
+          </ControlBar>
 
-        <Card title="Try this">
-          <div className="prose" style={{ fontSize: 13 }}>
-            <p><b style={{ color: "var(--green-bright)" }}>Start with one analyzer</b>, publish a burst of 20, and watch the queue absorb work faster than that consumer can process it.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Add the other analyzers</b> while a backlog remains. The queue begins distributing new work across the expanded pool and drains faster.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Give the analyzers different processing times</b>, then publish another burst. The fastest available analyzer naturally completes more windows—distribution is availability-driven, not strict round robin.</p>
-            <p><b style={{ color: "var(--green-bright)" }}>Pause the fastest analyzer</b> during a burst. The remaining consumers continue taking work without any change to the publisher.</p>
-          </div>
-        </Card>
+          <Card title="Try this">
+            <div className="prose" style={{ fontSize: 13 }}>
+              <p><b style={{ color: "var(--green-bright)" }}>Start with one analyzer</b>, publish 20, and watch the queue absorb work faster than one consumer can process it.</p>
+              <p><b style={{ color: "var(--green-bright)" }}>Add additional analyzers</b> while a backlog remains. New work is distributed across the expanded pool and the queue drains faster.</p>
+              <p><b style={{ color: "var(--green-bright)" }}>Set different processing times</b>, then publish another burst. The fastest available analyzer naturally completes more windows.</p>
+              <p><b style={{ color: "var(--green-bright)" }}>Pause the fastest analyzer</b>. The remaining consumers continue taking work without any publisher change.</p>
+            </div>
+          </Card>
+        </div>
       </div>
 
       <div className="rail">

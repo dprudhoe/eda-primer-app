@@ -115,7 +115,7 @@ export default function Lesson00EventPatterns() {
           </div>
 
           <Anchored pt={STATE_SOURCE}>
-            <Node icon="◉" name="Tank Gateway" role="Pressure publisher" accent="cyan" style={{ width: 150 }} />
+            <Node icon="◉" name="Pressure Sensor" role="Publishes current readings" accent="cyan" style={{ width: 150 }} />
           </Anchored>
           <Anchored pt={EVENT_SOURCE}>
             <Node icon="✓" name="Line Quality" role="Reject publisher" accent="violet" style={{ width: 150 }} />
@@ -144,17 +144,6 @@ export default function Lesson00EventPatterns() {
               </div>
             </div>
           </Anchored>
-
-          <div className="contract-example state-example">
-            <span>Topic</span>
-            <code>Enterprise/Site1/Mfg/Tank1/Pressure</code>
-            <small>80 → 82 → 84 psi</small>
-          </div>
-          <div className="contract-example event-example">
-            <span>Topic</span>
-            <code>Enterprise/Site1/Mfg/Line1/PartRejected</code>
-            <small>PART-101 → PART-102 → PART-103</small>
-          </div>
 
           <AnimatePresence>
             {flyers.map((flyer) => (
