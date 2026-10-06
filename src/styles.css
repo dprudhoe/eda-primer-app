@@ -2595,3 +2595,17 @@ select.select-input {
   border-color: var(--cyan);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 13%, transparent);
 }
+
+/* Foundation lessons reuse the stage palette and existing lesson panels. */
+.foundation-event, .foundation-connection { padding: 32px; display: flex; flex-direction: column; gap: 18px; color: var(--text); }
+.foundation-kicker { color: var(--green-bright); text-transform: uppercase; font-size: 12px; letter-spacing: .08em; font-weight: 800; }
+.foundation-event h2, .foundation-connection h2 { font-size: 28px; line-height: 1.2; }
+.foundation-event p, .foundation-connection p { font-size: 14px; line-height: 1.65; max-width: 780px; }
+.foundation-topic { font-family: var(--font-mono); color: var(--green-bright); overflow-wrap: anywhere; }
+.foundation-event pre { padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+.foundation-recipients, .foundation-connect-row { display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap; }
+.foundation-recipients .node { flex: 1; min-width: 150px; }
+.foundation-connect-row { margin: 12px 0; }
+.foundation-connect-row > span { color: var(--green-bright); font-size: 24px; }
+.foundation-detail { border-top: 1px solid var(--line); padding-top: 18px; color: var(--text-dim); }
+@media (max-width: 640px) { .foundation-event, .foundation-connection { padding: 22px 16px; } .foundation-connect-row { gap: 12px; } }

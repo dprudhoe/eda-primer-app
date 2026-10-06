@@ -26,18 +26,22 @@ npm run preview  # serve the production build
 
 | # | Lesson | Teaches |
 |---|--------|---------|
-| — | Why EDA? | Landing page: "not all messages are equal" |
-| 1 | Fire and Forget | Best-effort telemetry (PLC → Ignition Edge → broker); nothing stored for absent consumers |
-| 2 | Current State or Every Event? | Whether a consumer needs the latest value or every occurrence |
-| 3 | Retained State | Current state ("what is true now?") vs. events ("what happened?") |
-| 4 | MQTT QoS & Business Success | QoS 1 holds/redelivers to an offline consumer, but transport ack ≠ committed business processing |
-| 5 | Topics, Subscriptions & Durable Queues | Publishers publish to topics; queues attract via subscriptions (`*`, `>` wildcards) |
-| 6 | Competing Consumers | One vibration-analysis queue distributes independent windows across analyzer instances |
-| 7 | Reliability: Retry, TTL & DMQ | Retry, TTL countdown, and dead-message isolation policies |
-| 8 | REST Messaging | HTTP POST publishes to the broker; queues deliver to a REST endpoint, dequeuing only on 2xx |
-| 9 | Event Reuse & Mixed Delivery | One event, many consumers — direct / durable-queue / queue-backed HTTP contracts coexisting |
-| 10 | Event Mesh | Multi-broker mesh, subscription propagation, WAN + consumer-outage store-and-forward |
-| 11 | The Manufacturing Ecosystem | All messaging patterns operating together across factory, HQ, and AWS |
+| — | Introduction | Overview and lesson navigation |
+| 1 | Why Event-Driven Architecture? | Point-to-point factory integrations versus a shared event broker |
+| 2 | What Is an Event? | Device observations, operational occurrences, business activities, commands, and requests |
+| 3 | What Does an Event Broker Do? | Publishers, subscription matching, and interested consumers |
+| 4 | How Do Applications Connect? | MQTT, AMQP 1.0, JMS, REST messaging, and SMF |
+| 5 | Current State or Every Event? | Whether a consumer needs the latest value or every occurrence |
+| 6 | Direct and Guaranteed Delivery | Live telemetry versus durable business events during consumer outages |
+| 7 | Topics, Subscriptions & Durable Queues | Topic subscriptions and durable endpoints |
+| 8 | Competing Consumers | Independent vibration-analysis windows distributed across consumers |
+| 9 | Retained State | Current state versus historical events |
+| 10 | MQTT QoS & Business Success | Transport acknowledgement versus committed business processing |
+| 11 | Reliability: Retry, TTL & DMQ | Retries, expiration, and failed-message isolation |
+| 12 | REST Messaging | HTTP publishing and queue-backed HTTP delivery |
+| 13 | Event Reuse & Mixed Delivery | Independent consumers with different delivery contracts |
+| 14 | Event Mesh | Multi-broker, cross-site store-and-forward |
+| 15 | The Manufacturing Ecosystem | All patterns together across factory, HQ, and AWS |
 
 Each lesson follows the same shape: a **scenario**, an animated **stage**, a
 **controls** panel, a **"Key takeaways"** summary, and a closing **knowledge check**.
@@ -56,7 +60,8 @@ src/
   lessons/
     registry.ts            # lesson metadata + component map (index order)
     Intro.tsx
-    Lesson01…Lesson09*.tsx # note: Lesson07Rest = lesson 7, Lesson07FanOutMixed = lesson 8, Lesson09EventMesh = lesson 9
+    LessonFoundations.tsx  # four introductory lessons
+    Lesson00…Lesson10*.tsx # existing pattern lessons; display order is defined in registry.ts
 ```
 
 ## Notes

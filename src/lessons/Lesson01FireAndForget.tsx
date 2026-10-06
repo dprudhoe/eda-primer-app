@@ -1,224 +1,254 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import ignitionLogo from "../assets/ignition-edge.webp";
 import {
   Anchored,
   Broker,
   Btn,
   Card,
   ControlBar,
-  ControlGroup,
   InsightCard,
   MsgToken,
   Node,
   Particle,
   Prediction,
+  QueueChip,
+  Segmented,
   Stage,
   StatPill,
-  TagCard,
+  Toggle,
 } from "../components/kit";
-import { useFlow, Pt } from "../components/useFlow";
+import { useFlow } from "../components/useFlow";
 
-const EDGE: Pt = { x: 31, y: 36 };
-const PLC: Pt = { x: 31, y: 80 };
-const HUB: Pt = { x: 59, y: 36 };
-const DASH: Pt = { x: 86, y: 36 };
-
-function drift(prev: number) {
-  const d = (Math.random() - 0.5) * 1.8;
-  return Math.round(Math.min(96, Math.max(58, prev + d)) * 10) / 10;
-}
-
+const SOURCE = { x: 15, y: 40 },
+  HUB = { x: 48, y: 40 },
+  TARGET = { x: 83, y: 40 };
 export default function Lesson01FireAndForget() {
-  const { flyers, emit, remove } = useFlow();
-  const [connected, setConnected] = useState(true);
-  const [running, setRunning] = useState(false);
-  const [temp, setTemp] = useState(72.4);
-  const [dashValue, setDashValue] = useState<number | null>(72.4);
-  const [stats, setStats] = useState({ published: 0, delivered: 0, lost: 0 });
-
-  const tempRef = useRef(temp);
-  const connectedRef = useRef(connected);
-  tempRef.current = temp;
-  connectedRef.current = connected;
-  const timers = useRef<number[]>([]);
-  const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
-  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
-
-  const sample = () => {
-    const t = drift(tempRef.current);
-    tempRef.current = t;
-    setTemp(t);
-    // the raw reading always rises from the PLC into the Ignition Edge gateway
-    emit({ from: PLC, to: EDGE, tone: "green", label: `${t.toFixed(1)}°C`, duration: 0.5 });
-
-    const isConnected = connectedRef.current;
-    setStats((s) => ({
-      ...s,
-      published: s.published + 1,
-      delivered: s.delivered + (isConnected ? 1 : 0),
-      lost: s.lost + (isConnected ? 0 : 1),
-    }));
-    later(330, () =>
-      emit({
-        from: EDGE,
-        to: isConnected ? DASH : HUB,
-        tone: isConnected ? "green" : "red",
-        label: `${t.toFixed(1)}°C`,
-        duration: isConnected ? 1.0 : 0.6,
-        dropAtEnd: !isConnected,
-        meta: { value: t, delivered: isConnected },
-      }),
-    );
+  const [mode, setMode] = useState<"direct" | "guaranteed">("direct");
+  const [online, setOnline] = useState(true);
+  const [queue, setQueue] = useState<string[]>([]);
+  const [published, setPublished] = useState(0);
+  const [delivered, setDelivered] = useState(0);
+  const [lost, setLost] = useState(0);
+  const [latest, setLatest] = useState("—");
+  const { flyers, emit, remove, clear } = useFlow();
+  const busy = flyers.length > 0;
+  const reset = () => {
+    clear();
+    setQueue([]);
+    setPublished(0);
+    setDelivered(0);
+    setLost(0);
+    setLatest("—");
+    setOnline(true);
   };
-
+  const send = () => {
+    const label =
+      mode === "direct"
+        ? `${(72.4 + published * 0.2).toFixed(1)}°C`
+        : `Material consumed · ${published + 1}`;
+    setPublished((p) => p + 1);
+    emit({
+      tone: "green",
+      from: SOURCE,
+      to: HUB,
+      label,
+      meta: { incoming: true },
+      duration: 0.6,
+    });
+  };
   useEffect(() => {
-    if (!running) return;
-    const iv = window.setInterval(sample, 1150);
-    return () => window.clearInterval(iv);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running]);
-
-  const note = !connected
-    ? "The dashboard is disconnected. Ignition keeps publishing, but the broker has no one to deliver to — those readings are simply dropped."
-    : "Every fresh reading flows PLC → Ignition → broker → dashboard. If the dashboard is absent, nothing is stored for later.";
-
+    if (mode !== "guaranteed" || !online || busy || !queue.length) return;
+    const timer = window.setTimeout(
+      () =>
+        emit({
+          tone: "green",
+          from: HUB,
+          to: TARGET,
+          label: queue[0],
+          meta: { drain: true },
+        }),
+      150,
+    );
+    return () => window.clearTimeout(timer);
+  }, [mode, online, busy, queue, emit]);
   return (
     <div className="lesson-layout">
       <div>
-        <Stage note={note} minHeight={380}>
-          <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <line className="flow-line active" x1={PLC.x} y1={PLC.y} x2={EDGE.x} y2={EDGE.y} vectorEffect="non-scaling-stroke" />
-            <line className="flow-line active" x1={EDGE.x} y1={EDGE.y} x2={HUB.x} y2={HUB.y} vectorEffect="non-scaling-stroke" />
-            <line className={`flow-line ${connected ? "active" : "dead"}`} x1={HUB.x} y1={HUB.y} x2={DASH.x} y2={DASH.y} vectorEffect="non-scaling-stroke" />
+        <Stage
+          minHeight={430}
+          note={
+            mode === "direct"
+              ? "Direct delivery serves matching connected subscribers. This demo stores no readings for an offline dashboard."
+              : "Guaranteed publications are stored for the configured durable queue. This demo assumes successful processing and acknowledgement when the consumer is online."
+          }
+        >
+          <svg
+            className="flow-svg"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            <line
+              className="flow-line active"
+              x1={15}
+              y1={40}
+              x2={48}
+              y2={40}
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              className={`flow-line ${online ? "active" : "dead"}`}
+              x1={48}
+              y1={40}
+              x2={83}
+              y2={40}
+              vectorEffect="non-scaling-stroke"
+            />
           </svg>
-
-          <Anchored pt={PLC}>
+          <Anchored pt={SOURCE}>
             <Node
-              icon="▤"
-              name="Line 1 PLC"
-              role="Sensor / PLC"
-              accent="green"
-              value={`${temp.toFixed(1)}°C`}
-              sub={running ? "sampling 1/s" : "idle"}
-              lit={running}
-              style={{ minWidth: 120 }}
+              name={mode === "direct" ? "PLC gateway" : "MES"}
+              role="Producer"
+              sub={
+                mode === "direct" ? "Temperature measured" : "Material consumed"
+              }
+              style={{ width: 145 }}
             />
           </Anchored>
-
-          <Anchored pt={EDGE}>
-            <Node
-              icon={<img src={ignitionLogo} alt="Ignition Edge" style={{ width: 30, height: 22, objectFit: "contain" }} />}
-              name="Ignition Edge"
-              accent="green"
-              sub={!running ? "idle" : "publishing every reading"}
-              lit={running}
-              style={{ minWidth: 120 }}
-            />
-          </Anchored>
-
           <Anchored pt={HUB}>
-            <Broker active={running} />
+            <Broker active={busy} />
           </Anchored>
-
-          <Anchored pt={DASH}>
+          {mode === "guaranteed" && (
+            <Anchored pt={{ x: 48, y: 70 }}>
+              <QueueChip depth={queue.length} label="Inventory Management queue" />
+            </Anchored>
+          )}
+          <Anchored pt={TARGET}>
             <Node
-              icon="▦"
-              name="Operator Dashboard"
+              name={
+                mode === "direct"
+                  ? "Operator dashboard"
+                  : "Inventory Management"
+              }
               role="Consumer"
-              accent={connected ? "cyan" : "slate"}
-              value={connected ? (dashValue != null ? `${dashValue.toFixed(1)}°C` : "—") : "—"}
-              sub={connected ? "live" : "no data while offline"}
-              badge={connected ? { text: "Connected", kind: "ok" } : { text: "Disconnected", kind: "off" }}
-              offline={!connected}
-              style={{ minWidth: 128 }}
+              sub={latest}
+              value={online ? "Online" : "Offline"}
+              offline={!online}
+              accent="cyan"
+              style={{ width: 165 }}
             />
           </Anchored>
-
           <AnimatePresence>
             {flyers.map((f) => (
               <Particle
                 key={f.id}
                 from={f.from}
                 to={f.to}
-                duration={f.duration}
+                duration={0.6}
                 onDone={() => {
-                  if (!f.dropAtEnd && (f.meta as any)?.delivered) setDashValue((f.meta as any).value as number);
                   remove(f.id);
+                  if (f.meta?.incoming) {
+                    if (mode === "guaranteed") setQueue((q) => [...q, f.label]);
+                    else if (online)
+                      emit({
+                        tone: "green",
+                        from: HUB,
+                        to: TARGET,
+                        label: f.label,
+                      });
+                    else setLost((n) => n + 1);
+                  } else if (online) {
+                    setLatest(f.label);
+                    setDelivered((n) => n + 1);
+                    if (f.meta?.drain) setQueue((q) => q.slice(1));
+                  } else if (!f.meta?.drain) {
+                    setLost((n) => n + 1);
+                  }
                 }}
               >
-                <MsgToken label={f.label} tone={f.tone} dim={f.dropAtEnd} />
+                <MsgToken label={f.label} />
               </Particle>
             ))}
           </AnimatePresence>
         </Stage>
-
         <ControlBar>
           <div className="control-row">
-            <ControlGroup label="Publisher">
-              <Btn variant="primary" onClick={sample}>Publish one reading</Btn>
-              <Btn onClick={() => setRunning((r) => !r)}>{running ? "⏸ Stop continuous" : "▶ Start continuous"}</Btn>
-            </ControlGroup>
-            <ControlGroup label="Consumer">
-              {connected ? (
-                <Btn variant="danger" onClick={() => setConnected(false)}>Disconnect dashboard</Btn>
-              ) : (
-                <Btn onClick={() => setConnected(true)}>Reconnect dashboard</Btn>
-              )}
-            </ControlGroup>
+            <Segmented
+              value={mode}
+              options={[
+                { value: "direct", label: "Direct: live telemetry" },
+                { value: "guaranteed", label: "Guaranteed: business events" },
+              ]}
+              onChange={(m) => {
+                reset();
+                setMode(m);
+              }}
+            />
+            <Toggle
+              checked={online}
+              onChange={setOnline}
+              label="Consumer online"
+            />
           </div>
           <div className="control-row">
-            <StatPill label="Published" value={stats.published} tone="green" />
-            <StatPill label="Delivered" value={stats.delivered} tone="cyan" />
-            <StatPill label="Lost" value={stats.lost} tone="red" />
-            <Btn variant="ghost" sm onClick={() => setStats({ published: 0, delivered: 0, lost: 0 })}>Reset counters</Btn>
+            <Btn variant="primary" disabled={busy} onClick={send}>
+              {mode === "direct" ? "Publish a reading" : "Consume material"}
+            </Btn>
+          </div>
+          <div className="control-row">
+            <StatPill label="Published" value={published} />
+            <StatPill label="Delivered" value={delivered} tone="cyan" />
+            <StatPill label="Queued" value={queue.length} tone="amber" />
+            <StatPill label="Missed" value={lost} tone="red" />
           </div>
         </ControlBar>
       </div>
-
       <div className="rail">
-        <Prediction
-          question="The dashboard disconnects for 10 seconds while Ignition keeps publishing. When it reconnects, what does it see?"
-          choices={[
-            { id: "a", text: "All 10 missed readings, replayed in order" },
-            { id: "b", text: "The current live reading — the missed ones are gone", correct: true },
-            { id: "c", text: "An error, because messages were lost" },
-          ]}
-          reveal={
-            <>
-              <b>The current live reading.</b> Best-effort (fire-and-forget) messages are not stored
-              for an absent consumer. Disconnect, watch readings drop, then reconnect — the dashboard
-              simply resumes with fresh values.
-            </>
-          }
-        />
-
         <Card title="Scenario">
           <div className="prose">
             <p>
-              A <strong>Line 1 PLC</strong> is sampled once per second by an{" "}
-              <strong>Ignition Edge</strong> gateway, which publishes to the broker. An{" "}
-              <strong>operator dashboard</strong> subscribes and shows the live value.
+              A dashboard needs fresh temperature readings. Inventory Management
+              needs each material-consumed event from MES to deduct the consumed
+              quantity from stock.
             </p>
             <p>
-              Delivery is <strong>best-effort</strong>: the broker keeps nothing for a consumer that
-              isn't connected. That tradeoff is appropriate here because another fresh reading will
-              arrive shortly.
+              This durable queue belongs to Inventory Management. Another
+              independent consumer application would typically have its own queue
+              and receive its own copy of matching events. Multiple instances of
+              Inventory Management can share this queue and divide the work.
+            </p>
+            <p>
+              Take the consumer offline and publish three messages. Reconnect
+              it. Direct delivery resumes with new publications; Guaranteed
+              delivery retains queued events and automatically delivers them in
+              order when the consumer comes back online.
+            </p>
+            <p>
+              Direct can suit replaceable live updates. Guaranteed suits work
+              that must survive temporary consumer outages, provided a durable
+              queue and appropriate policies are configured.
             </p>
           </div>
         </Card>
-
         <InsightCard
           items={[
-            "Messages are not stored for an unavailable consumer.",
-            "Occasional loss is acceptable when another update arrives shortly.",
-            "For telemetry, freshness often matters more than perfect delivery.",
+            "Direct (fire-and-forget) delivery trades offline recovery for live delivery without durable storage.",
+            "Guaranteed delivery stores messages for a durable endpoint until acknowledgement, subject to capacity and expiration policies.",
+            "A queue serves a consumer application. Independent applications typically have separate queues; instances of one application can share a queue.",
+            "Telemetry is not always expendable: historian, compliance, or traceability consumers may need every reading.",
+            "Delivery acknowledgement is not proof of a successful business transaction. Later lessons cover processing, retries, and duplicates.",
           ]}
         />
-
-        <TagCard
-          title="Typical uses"
-          tags={["Sensor telemetry", "PLC values", "Heartbeats", "Vibration", "Temperature", "Fast-changing process values"]}
+        <Prediction
+          question="Inventory Management is offline when material is consumed. Which setup supports receiving that event later?"
+          choices={[
+            { id: "a", text: "Direct delivery to its live subscription" },
+            {
+              id: "b",
+              text: "Guaranteed delivery into its configured durable queue",
+              correct: true,
+            },
+          ]}
+          reveal="The durable queue stores the event during the outage. The application must then process it safely and acknowledge it; expiration and storage limits still apply."
         />
       </div>
     </div>
