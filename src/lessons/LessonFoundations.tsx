@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Anchored,
   Broker,
@@ -15,7 +15,6 @@ import {
   Segmented,
   Stage,
   StatPill,
-  Toggle,
 } from "../components/kit";
 import { Pt, useFlow } from "../components/useFlow";
 
@@ -31,52 +30,44 @@ const apps = [
 const architectureScenarios = [
   {
     label: "Production completed",
-    action: "Complete a production order",
     source: 1,
     targets: [3, 4],
     event: "Order completed",
-    topic: "plant/line1/order/completed",
     description:
       "MES announces a completed order. Warehouse updates inventory and Quality records its traceability outcome.",
   },
   {
     label: "Machine fault",
-    action: "Detect a machine fault",
     source: 0,
     targets: [1, 2],
     event: "Machine fault detected",
-    topic: "plant/line1/machine/faulted",
     description:
       "PLC / SCADA reports a machine fault. MES reassesses the production schedule and Maintenance opens a work request.",
   },
   {
     label: "Quality rejected",
-    action: "Reject an inspected part",
     source: 4,
     targets: [1, 3],
     event: "Part rejected",
-    topic: "plant/line1/inspection/rejected",
     description:
       "Quality announces a failed inspection. MES flags rework and Warehouse keeps the part out of available stock.",
   },
   {
     label: "Materials ready",
-    action: "Make materials available",
     source: 3,
     targets: [1],
     event: "Materials available",
-    topic: "plant/line1/materials/available",
     description:
       "Warehouse announces that materials are ready. MES can release the next production operation.",
   },
 ];
-function Lines({ paths }: { paths: [Pt, Pt][] }) {
+function Lines({ paths, dimmed = false }: { paths: [Pt, Pt][]; dimmed?: boolean }) {
   return (
     <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
       {paths.map(([a, b], i) => (
         <line
           key={i}
-          className="flow-line active"
+          className={`flow-line active ${dimmed ? "connection-muted" : ""}`}
           x1={a.x}
           y1={a.y}
           x2={b.x}
@@ -126,7 +117,7 @@ function Layout({
 }
 export function LessonWhyEDA() {
   const [mode, setMode] = useState<"point" | "broker">("point");
-  const [sent, setSent] = useState(0);
+  const [exchange, setExchange] = useState(0);
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const scenario = architectureScenarios[scenarioIndex];
   const { flyers, emit, remove, clear } = useFlow();
@@ -138,7 +129,6 @@ export function LessonWhyEDA() {
           shown.slice(i + 1).map((b) => [a.pt, b.pt] as [Pt, Pt]),
         );
   const publish = (scenario: (typeof architectureScenarios)[number]) => {
-    setSent((s) => s + 1);
     const targets = [...scenario.targets, 5];
     if (mode === "broker") {
       emit({
@@ -150,15 +140,7 @@ export function LessonWhyEDA() {
         duration: 0.7,
       });
     } else {
-      targets.forEach((i) =>
-        emit({
-          tone: "green",
-          from: apps[scenario.source].pt,
-          to: apps[i].pt,
-          label: scenario.event,
-          duration: 0.9,
-        }),
-      );
+      setExchange((n) => n + 1);
     }
   };
   return (
@@ -174,8 +156,9 @@ export function LessonWhyEDA() {
             Switch architectures and click a scenario to run it. This
             illustration assumes every application pair needs an integration to
             make the growth visible; actual factories may have fewer
-            connections. Choose different factory scenarios to see each system
-            take a turn publishing.
+            connections. In point-to-point mode, systems call each other and
+            wait for replies. Broker mode publishes events to interested
+            systems.
           </p>
         </>
       }
@@ -192,9 +175,48 @@ export function LessonWhyEDA() {
     >
       <Stage
         minHeight={490}
-        note={`${scenario.description} Analytics also receives this event.`}
+        note={
+          mode === "point"
+            ? "Highlighted connections show a request followed by a reply between each interested system and the source application."
+            : "The source publishes once to the broker, which routes copies to interested consumers, including Analytics."
+        }
       >
-        <Lines paths={paths} />
+        <Lines paths={paths} dimmed={mode === "point" && exchange > 0} />
+        {mode === "point" && exchange > 0 && (
+          <>
+            <svg
+              className="flow-svg"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              {[...scenario.targets, 5].map((i, index) => (
+                <motion.line
+                  key={`${exchange}-${i}`}
+                  className="request-reply-line"
+                  x1={apps[i].pt.x}
+                  y1={apps[i].pt.y}
+                  x2={apps[scenario.source].pt.x}
+                  y2={apps[scenario.source].pt.y}
+                  vectorEffect="non-scaling-stroke"
+                  initial={{ strokeDashoffset: 0, opacity: 0.2 }}
+                  animate={{
+                    strokeDashoffset: [0, -32, 0],
+                    opacity: [0.2, 0.8, 0.8, 0.2],
+                  }}
+                  transition={{ duration: 0.7, delay: index * 0.75, ease: "linear" }}
+                >
+                  <title>
+                    {apps[i].name} requests data from{" "}
+                    {apps[scenario.source].name}, which replies.
+                  </title>
+                </motion.line>
+              ))}
+            </svg>
+            <Anchored pt={HUB}>
+              <div className="request-reply-caption">Request ⇄ Reply</div>
+            </Anchored>
+          </>
+        )}
         {mode === "broker" && (
           <Anchored pt={HUB}>
             <Broker active={flyers.length > 0} />
@@ -253,11 +275,11 @@ export function LessonWhyEDA() {
               </Btn>
             ))}
           </div>
-          <div className="prose">
+          <div
+            className="prose architecture-scenario-description"
+            aria-live="polite"
+          >
             <p>{scenario.description}</p>
-            <p>
-              Topic: <code>{scenario.topic}</code>
-            </p>
           </div>
         </ControlGroup>
         <div className="control-row">
@@ -265,22 +287,20 @@ export function LessonWhyEDA() {
             value={mode}
             options={[
               { value: "point", label: "Point to point" },
-              { value: "broker", label: "Event broker" },
+              { value: "broker", label: "Event-Driven" },
             ]}
             onChange={(m) => {
               clear();
+              setExchange(0);
               setMode(m);
             }}
           />
         </div>
         <div className="control-row">
           <StatPill
-            label={
-              mode === "point" ? "Pair integrations" : "Broker connections"
-            }
+            label="Integration points"
             value={paths.length}
           />
-          <StatPill label="Events published" value={sent} />
         </div>
       </ControlBar>
     </Layout>
@@ -412,17 +432,22 @@ export function LessonWhatIsEvent() {
   );
 }
 export function LessonWhatIsBroker() {
-  const [maintenance, setMaintenance] = useState(true);
-  const [analytics, setAnalytics] = useState(false);
   const [kind, setKind] = useState<"temperature" | "fault">("temperature");
   const [received, setReceived] = useState([0, 0]);
-  const { flyers, emit, remove, clear } = useFlow();
+  const { flyers, emit, remove } = useFlow();
   const source = { x: 15, y: 50 };
   const targets = [
     { x: 85, y: 27 },
     { x: 85, y: 75 },
   ];
   const topic = `plant/line1/machine/${kind}`;
+  const publish = (type: "temperature" | "fault") => {
+    setKind(type);
+    emit({ tone: "green", from: source, to: HUB,
+      label: type === "fault" ? "Fault detected" : "72.4°C",
+      meta: { route: true, matches: type === "fault" ? [0, 1] : [1] },
+    });
+  };
   return (
     <Layout
       scenario={
@@ -430,10 +455,10 @@ export function LessonWhatIsBroker() {
           <p>
             A DataOps tool collects and contextualizes equipment data, then
             publishes temperature readings and machine faults. Maintenance
-            subscribes only to faults. Analytics subscribes to both event types.
+            subscribes only to faults. Dashboard subscribes to both event types.
           </p>
           <p>
-            Change subscriptions and publish each type. The broker checks
+            Publish a temperature reading or a fault. The broker checks
             interest and routes copies; the producer does not choose the
             receiving applications.
           </p>
@@ -447,12 +472,12 @@ export function LessonWhatIsBroker() {
       ]}
       question="Maintenance subscribes only to machine/fault. What happens to a temperature publication?"
       wrong="Every connected application receives it."
-      answer="Maintenance receives no copy; matching analytics can receive it."
+      answer="Maintenance receives no copy; Dashboard receives it."
       reveal="Being connected is not enough. The subscription must match the published topic."
     >
       <Stage
         minHeight={440}
-        note={`Publishing topic: ${topic}. Subscription changes affect future publications; this demo does not replay earlier events.`}
+        note={`Last publishing topic: ${topic}. Maintenance receives faults; Dashboard receives temperatures and faults.`}
       >
         <Lines
           paths={[
@@ -476,8 +501,8 @@ export function LessonWhatIsBroker() {
         <Anchored pt={targets[0]}>
           <Node
             name="Maintenance"
-            role="Consumer"
-            sub={maintenance ? "machine/fault" : "No subscription"}
+            role="Alarms"
+            sub="machine/fault"
             value={received[0]}
             accent="amber"
             style={{ width: 155 }}
@@ -485,9 +510,9 @@ export function LessonWhatIsBroker() {
         </Anchored>
         <Anchored pt={targets[1]}>
           <Node
-            name="Analytics"
-            role="Consumer"
-            sub={analytics ? "Both event types" : "No subscription"}
+            name="Dashboard"
+            role="Alarms and telemetry"
+            sub="Temperature + faults"
             value={received[1]}
             accent="violet"
             style={{ width: 155 }}
@@ -526,55 +551,8 @@ export function LessonWhatIsBroker() {
       </Stage>
       <ControlBar>
         <div className="control-row">
-          <Segmented
-            value={kind}
-            options={[
-              { value: "temperature", label: "Temperature" },
-              { value: "fault", label: "Machine fault" },
-            ]}
-            onChange={setKind}
-          />
-          <Btn
-            variant="primary"
-            onClick={() =>
-              emit({
-                tone: "green",
-                from: source,
-                to: HUB,
-                label: kind === "fault" ? "Fault detected" : "72.4°C",
-                meta: {
-                  route: true,
-                  matches: [
-                    ...(maintenance && kind === "fault" ? [0] : []),
-                    ...(analytics ? [1] : []),
-                  ],
-                },
-              })
-            }
-          >
-            Publish event
-          </Btn>
-        </div>
-        <div className="control-row">
-          <Toggle
-            checked={maintenance}
-            onChange={setMaintenance}
-            label="Maintenance: faults"
-          />
-          <Toggle
-            checked={analytics}
-            onChange={setAnalytics}
-            label="Analytics: both topics"
-          />
-          <Btn
-            variant="ghost"
-            onClick={() => {
-              clear();
-              setReceived([0, 0]);
-            }}
-          >
-            Reset counts
-          </Btn>
+          <Btn variant="primary" onClick={() => publish("temperature")}>Publish temperature</Btn>
+          <Btn variant="primary" onClick={() => publish("fault")}>Publish fault</Btn>
         </div>
       </ControlBar>
     </Layout>

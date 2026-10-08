@@ -1,281 +1,269 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Broker, Btn, Card, ControlBar, ControlGroup, InsightCard, Node } from "../components/kit";
-import { anySubMatches } from "../components/topics";
+import { AnimatePresence } from "framer-motion";
+import {
+  Anchored,
+  Broker,
+  Btn,
+  Card,
+  ControlBar,
+  ControlGroup,
+  InsightCard,
+  MsgToken,
+  Node,
+  Particle,
+  Prediction,
+  Stage,
+  StatPill,
+  Toggle,
+} from "../components/kit";
+import { topicMatches } from "../components/topics";
+import { useFlow } from "../components/useFlow";
 
-type QMsg = { id: number; topic: string };
-type Consumer = "none" | "running" | "paused";
-type Queue = {
-  id: number;
-  name: string;
-  subs: string[];
-  msgs: QMsg[];
-  consumer: Consumer;
-  flash?: boolean;
-};
-
-const EXAMPLE_EVENTS = [
-  "factory/line1/alarm",
-  "factory/line2/alarm",
+type Message = { id: number; topic: string };
+const subscription = "factory/*/material/consumed";
+const topics = [
+  "factory/line1/material/consumed",
+  "factory/line2/material/consumed",
   "factory/line1/temperature",
-  "factory/line1/quality/failed",
-  "factory/line2/quality/passed",
-  "factory/line1/production/started",
 ];
-
-const SAMPLE_SEQUENCE = [
-  "factory/line1/alarm",
-  "factory/line1/temperature",
-  "factory/line2/alarm",
-  "factory/line1/quality/failed",
-  "factory/line2/quality/passed",
-  "factory/line1/production/started",
-];
-
-let qid = 1;
-let mid = 1;
-
-function guidedQueues(): Queue[] {
-  return [
-    { id: qid++, name: "Alarm Queue", subs: ["factory/*/alarm"], msgs: [], consumer: "none" },
-    { id: qid++, name: "Line 1 Queue", subs: ["factory/line1/>"], msgs: [], consumer: "none" },
-    { id: qid++, name: "Quality Queue", subs: ["factory/*/quality/>"], msgs: [], consumer: "none" },
-  ];
-}
-
+const source = { x: 13, y: 24 },
+  hub = { x: 43, y: 24 },
+  queuePt = { x: 43, y: 68 },
+  consumerPt = { x: 83, y: 68 };
 export default function Lesson04Queues() {
-  const [queues, setQueues] = useState<Queue[]>(() => guidedQueues());
-  const [lastEvent, setLastEvent] = useState<{ topic: string; matched: string[] } | null>(null);
-  const [customTopic, setCustomTopic] = useState("factory/line1/alarm");
-  const queuesRef = useRef(queues);
-  queuesRef.current = queues;
-
-  // consumer processing loop: each running queue dequeues its front message
-  useEffect(() => {
-    const iv = window.setInterval(() => {
-      setQueues((cur) =>
-        cur.map((q) =>
-          q.consumer === "running" && q.msgs.length > 0 ? { ...q, msgs: q.msgs.slice(1) } : q,
-        ),
-      );
-    }, 1400);
-    return () => window.clearInterval(iv);
-  }, []);
-
-  const flashQueues = (ids: number[]) => {
-    setQueues((cur) => cur.map((q) => (ids.includes(q.id) ? { ...q, flash: true } : q)));
-    window.setTimeout(() => {
-      setQueues((cur) => cur.map((q) => (ids.includes(q.id) ? { ...q, flash: false } : q)));
-    }, 600);
-  };
-
+  const [online, setOnline] = useState(true);
+  const [queue, setQueue] = useState<Message[]>([]);
+  const [acknowledged, setAcknowledged] = useState(0);
+  const [last, setLast] = useState(
+    "Publish a material-consumed event, then take Inventory Management offline and publish again.",
+  );
+  const nextId = useRef(1);
+  const { flyers, emit, remove } = useFlow();
+  const busy = flyers.length > 0;
   const publish = (topic: string) => {
-    // compute matches from the ref (no side effects inside the setState updater)
-    const matched = queuesRef.current.filter((q) => anySubMatches(q.subs, topic));
-    const matchedIds = matched.map((q) => q.id);
-    const matchedNames = matched.map((q) => q.name);
-    setQueues((cur) =>
-      cur.map((q) => (matchedIds.includes(q.id) ? { ...q, msgs: [...q.msgs, { id: mid++, topic }] } : q)),
+    const message = { id: nextId.current++, topic };
+    emit({
+      from: source,
+      to: hub,
+      tone: "green",
+      label: topic,
+      duration: 0.6,
+      meta: { phase: "publish", message },
+    });
+    setLast(
+      topicMatches(subscription, topic)
+        ? "The queue subscription matches. The broker stores this event for Inventory Management."
+        : "The temperature topic does not match the material-consumed subscription. This queue stores no copy.",
     );
-    setLastEvent({ topic, matched: matchedNames });
-    if (matchedIds.length) flashQueues(matchedIds);
   };
-
-  const publishSequence = () => {
-    SAMPLE_SEQUENCE.forEach((topic, i) => window.setTimeout(() => publish(topic), i * 650));
-  };
-
-  const setConsumer = (id: number, consumer: Consumer) =>
-    setQueues((cur) => cur.map((q) => (q.id === id ? { ...q, consumer } : q)));
-
-  const resetAll = () =>
-    setQueues((cur) => cur.map((q) => ({ ...q, msgs: [], consumer: "none" })));
-
+  useEffect(() => {
+    if (!online || busy || !queue.length) return;
+    const timer = window.setTimeout(
+      () =>
+        emit({
+          from: queuePt,
+          to: consumerPt,
+          tone: "green",
+          label: `Material consumed · ${queue[0].id}`,
+          meta: { phase: "deliver", message: queue[0] },
+        }),
+      180,
+    );
+    return () => window.clearTimeout(timer);
+  }, [online, busy, queue, emit]);
   return (
-    <div className="lesson-layout lesson4-layout">
+    <div className="lesson-layout">
       <div>
-        <div className="stage-card">
-          {/* publishers introduce the event; the broker fans it into matching queues below */}
-          <div className="stage" style={{ minHeight: 118, display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "18px 24px" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              <Node icon="▣" name="Publishers" role="Publish to topics" accent="green" sub="lines 1 & 2" />
-              <div style={{ fontSize: 20, lineHeight: 1, color: "var(--text-mute)" }}>↓</div>
-              <Broker active={!!lastEvent} />
-            </div>
-            <div style={{ height: 34, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-              {lastEvent ? (
-                <div className="row" style={{ gap: 8, justifyContent: "center" }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-mute)" }}>Last event</span>
-                  <span className="mono" style={{ fontSize: 12.5, color: "var(--green-bright)" }}>{lastEvent.topic}</span>
-                  <span style={{ fontSize: 11.5, color: lastEvent.matched.length ? "var(--text-dim)" : "var(--amber)" }}>
-                    {lastEvent.matched.length ? `→ matched ${lastEvent.matched.join(", ")}` : "→ no queue attracted this event"}
-                  </span>
-                </div>
-              ) : (
-                <div className="dim" style={{ fontSize: 12 }}>
-                  Publish an event — the broker compares its topic against every queue's subscriptions.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* stacked queues — fixed height, internal scroll (no layout jump) */}
-          <div className="stage" style={{ borderTop: "1px solid var(--line-soft)", padding: "16px 8px" }}>
-            <div className="queue-fanout">
-              <svg className="queue-fan-lines" viewBox="0 0 1000 360" preserveAspectRatio="none" aria-hidden="true">
-                <path className={queues[0]?.flash ? "active" : ""} d="M 500 0 L 165 72" />
-                <path className={queues[1]?.flash ? "active" : ""} d="M 500 0 L 500 72" />
-                <path className={queues[2]?.flash ? "active" : ""} d="M 500 0 L 835 72" />
-              </svg>
-              <div className="queue-fan-targets">
-                {queues.map((q) => (
-                  <QueueRow key={q.id} q={q} onConsumer={(c) => setConsumer(q.id, c)} />
-                ))}
+        <Stage minHeight={540} note={last}>
+          <svg
+            className="flow-svg"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+          >
+            <line
+              className="flow-line active"
+              x1={source.x}
+              y1={source.y}
+              x2={hub.x}
+              y2={hub.y}
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              className="flow-line active"
+              x1={hub.x}
+              y1={hub.y}
+              x2={queuePt.x}
+              y2={queuePt.y}
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              className={`flow-line ${online ? "active" : "dead"}`}
+              x1={queuePt.x}
+              y1={queuePt.y}
+              x2={consumerPt.x}
+              y2={consumerPt.y}
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+          <Anchored pt={source}>
+            <Node
+              name="MES"
+              role="Publishes to topics"
+              style={{ width: 140 }}
+            />
+          </Anchored>
+          <Anchored pt={hub}>
+            <Broker active={busy} />
+          </Anchored>
+          <Anchored pt={queuePt}>
+            <div className="durable-queue-demo">
+              <div className="node-name">Inventory Management queue</div>
+              <div className="node-role">Subscription: {subscription}</div>
+              <div className="durable-queue-messages">
+                {queue.length ? (
+                  queue.map((m) => (
+                    <div key={m.id} className="queue-msg">
+                      #{m.id} · {m.topic}
+                    </div>
+                  ))
+                ) : (
+                  <div className="queue-empty">Empty</div>
+                )}
+              </div>
+              <div className="node-sub">
+                {queue.length} stored · removed after acknowledgement
               </div>
             </div>
-          </div>
-
-          <div className="stage-note">
-            <span className="dot" />
-            Publishers send to <span className="mono" style={{ margin: "0 4px" }}>topics</span>; each queue attracts matching events through its subscriptions and holds them until a consumer is ready.
-          </div>
-        </div>
-
-        <div className="control-stack">
-          <ControlBar>
-            <div className="control-row">
-              <ControlGroup label="Example events — click to publish">
-                <div className="example-grid">
-                  {EXAMPLE_EVENTS.map((t) => (
-                    <Btn key={t} className="block" onClick={() => publish(t)}>
-                      {t}
-                    </Btn>
-                  ))}
-                </div>
-              </ControlGroup>
-            </div>
-            <div className="control-row">
-              <ControlGroup label="Sequences">
-                <Btn variant="primary" onClick={publishSequence}>
-                  ▶ Publish sample sequence
+          </Anchored>
+          <Anchored pt={consumerPt}>
+            <Node
+              name="Inventory Management"
+              role="Consumer application"
+              value={online ? "Online" : "Offline"}
+              sub={`Acknowledged ${acknowledged}`}
+              offline={!online}
+              accent="cyan"
+              style={{ width: 180 }}
+            />
+          </Anchored>
+          <AnimatePresence>
+            {flyers.map((f) => (
+              <Particle
+                key={f.id}
+                from={f.from}
+                to={f.to}
+                duration={0.65}
+                onDone={() => {
+                  remove(f.id);
+                  const message = f.meta?.message as Message;
+                  if (f.meta?.phase === "publish") {
+                    if (topicMatches(subscription, message.topic))
+                      emit({
+                        from: hub,
+                        to: queuePt,
+                        tone: "green",
+                        label: `Store event #${message.id}`,
+                        meta: { phase: "store", message },
+                      });
+                  } else if (f.meta?.phase === "store")
+                    setQueue((q) => [...q, message]);
+                  else if (f.meta?.phase === "deliver" && online)
+                    emit({
+                      from: consumerPt,
+                      to: queuePt,
+                      tone: "amber",
+                      label: `ACK #${message.id}`,
+                      meta: { phase: "ack", message },
+                    });
+                  else if (f.meta?.phase === "ack" && online) {
+                    setQueue((q) => q.filter((m) => m.id !== message.id));
+                    setAcknowledged((n) => n + 1);
+                  }
+                }}
+              >
+                <MsgToken label={f.label} tone={f.tone} />
+              </Particle>
+            ))}
+          </AnimatePresence>
+        </Stage>
+        <ControlBar>
+          <ControlGroup label="Example topics — click to publish">
+            <div className="example-grid">
+              {topics.map((t) => (
+                <Btn key={t}  onClick={() => publish(t)}>
+                  {t}
                 </Btn>
-                <Btn variant="ghost" sm onClick={resetAll}>
-                  Reset queues
-                </Btn>
-              </ControlGroup>
+              ))}
             </div>
-            <div className="control-row">
-              <ControlGroup label="Custom event">
-                <input className="text-input" value={customTopic} onChange={(e) => setCustomTopic(e.target.value)} style={{ minWidth: 240 }} />
-                <Btn onClick={() => publish(customTopic)}>Publish</Btn>
-              </ControlGroup>
-            </div>
-          </ControlBar>
-
-          <Card title="Try this">
-            <div className="prose" style={{ fontSize: 13.5 }}>
-              <p><b style={{ color: "var(--green-bright)" }}>1.</b> Publish the sample sequence and watch each queue attract only what its subscription matches.</p>
-              <p><b style={{ color: "var(--green-bright)" }}>2.</b> Notice <code>factory/line1/quality/failed</code> lands in <em>both</em> Line 1 Queue and Quality Queue.</p>
-              <p><b style={{ color: "var(--green-bright)" }}>3.</b> Attach a consumer to drain a queue; pause it and keep publishing to watch its depth grow.</p>
-            </div>
-          </Card>
-        </div>
+          </ControlGroup>
+          <div className="control-row">
+            <Toggle
+              checked={online}
+              onChange={setOnline}
+              label="Inventory Management online"
+            />
+          </div>
+          <div className="control-row">
+            <StatPill label="Stored" value={queue.length} tone="amber" />
+            <StatPill label="Acknowledged" value={acknowledged} tone="cyan" />
+          </div>
+        </ControlBar>
       </div>
-
       <div className="rail">
         <Card title="Scenario">
           <div className="prose">
             <p>
-              Production events are published once to topics. Three durable queues use different
-              subscriptions to attract only the events their consumers need.
+              MES publishes material-consumed events using Guaranteed delivery.
+              Inventory Management has a durable queue subscribed to those
+              events from both production lines.
+            </p>
+            <p>
+              The subscription determines which events enter the queue. The
+              queue stores them while Inventory Management is offline. Reconnect
+              it to watch delivery and the acknowledgement return to the queue.
+            </p>
+            <p>
+              This example assumes successful processing before acknowledgement.
+              If the consumer disconnects before acknowledgement, the stored
+              event remains available for redelivery.
             </p>
           </div>
         </Card>
-
-        <Card title="Wildcards">
-          <div className="prose" style={{ fontSize: 13 }}>
-            <p><code>*</code> matches exactly one level — <code>factory/*/alarm</code>.</p>
-            <p><code>&gt;</code> matches one or more trailing levels — <code>factory/line1/&gt;</code>.</p>
+        <Card title="Try this">
+          <div className="prose">
+            <p>
+              Take Inventory Management offline. Publish one material-consumed
+              event from each line, then a temperature reading. Only the
+              matching events accumulate.
+            </p>
+            <p>
+              Reconnect the consumer. Each event stays stored during delivery,
+              then leaves after the acknowledgement reaches the broker.
+            </p>
           </div>
         </Card>
-
         <InsightCard
           items={[
-            "A durable queue is a broker-managed object that attracts matching events through subscriptions and holds them until a consumer acknowledges them.",
-            "Publishers publish to topics, not directly to queues.",
-            "Subscriptions define which messages a queue attracts.",
-            "A queue can hold multiple subscriptions; multiple queues can attract the same event.",
-            "Each queue keeps its own independent copy.",
-            "Queues buffer messages until their consumers are ready.",
-            "Publishers never need to know which queues or consumers exist.",
+            "A topic labels a message; a subscription matches it; a durable queue stores the matching copy.",
+            "This queue serves Inventory Management. Independent consumer applications typically have their own queues.",
+            "A consumer receives from its queue and acknowledges messages after processing.",
+            "Unacknowledged events can be redelivered. Applications must handle duplicates safely.",
+            "The next lesson connects multiple instances of one consumer application to the same queue to divide the work.",
           ]}
         />
+        <Prediction
+          question="Inventory Management receives an event but disconnects before acknowledging it. Is the stored event removed?"
+          choices={[
+            { id: "a", text: "Yes, receiving it is enough" },
+            {
+              id: "b",
+              text: "No, it remains available for redelivery",
+              correct: true,
+            },
+          ]}
+          reveal="The queue retains the event until the broker receives acknowledgement, subject to storage and expiration policies. A redelivery may repeat work, so processing must account for duplicates."
+        />
       </div>
-    </div>
-  );
-}
-
-function QueueRow({ q, onConsumer }: { q: Queue; onConsumer: (c: Consumer) => void }) {
-  return (
-    <div className={`queue-row ${q.flash ? "flash" : ""}`}>
-      <div className="qr-queue">
-        <div className="qr-info">
-          <div className="queue-head">
-            <span className="queue-name">{q.name}</span>
-          </div>
-          <div className="queue-subs">
-            {q.subs.map((s) => (
-              <span key={s} className="queue-sub">{s}</span>
-            ))}
-          </div>
-        </div>
-
-        <div className="qr-msgs">
-          <AnimatePresence initial={false}>
-            {q.msgs.length === 0 ? (
-              <div className="queue-empty" key="empty">empty</div>
-            ) : (
-              q.msgs.map((m) => (
-                <motion.div
-                  key={m.id}
-                  layout
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: 36, scale: 0.85 }}
-                  transition={{ duration: 0.26 }}
-                  className="queue-msg"
-                >
-                  <span>{m.topic}</span>
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
-        </div>
-        <div className="queue-depth-footer">
-          Queue depth <span className="queue-depth">{q.msgs.length}</span>
-        </div>
-      </div>
-
-      <div className={`queue-consumer-link ${q.consumer === "running" ? "active" : ""}`}>↓</div>
-
-      <Node
-        name="Consumer"
-        role={q.consumer === "running" ? "Receiving messages" : "Not attached"}
-        accent={q.consumer === "running" ? "green" : "slate"}
-        lit={q.consumer === "running"}
-        style={{ minWidth: 0, justifyContent: "center", padding: 10 }}
-      >
-        <div className="queue-consumer-controls">
-          {q.consumer === "running" ? (
-            <Btn sm onClick={() => onConsumer("none")}>Stop consuming</Btn>
-          ) : (
-            <Btn sm variant="primary" onClick={() => onConsumer("running")}>Start consuming</Btn>
-          )}
-          <div className="queue-consumer-status">
-            {q.consumer === "running" ? "messages leave on ack" : "messages accumulate"}
-          </div>
-        </div>
-      </Node>
     </div>
   );
 }

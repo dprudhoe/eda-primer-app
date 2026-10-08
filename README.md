@@ -33,15 +33,16 @@ npm run preview  # serve the production build
 | 4 | How Do Applications Connect? | MQTT, AMQP 1.0, JMS, REST messaging, and SMF |
 | 5 | Current State or Every Event? | Whether a consumer needs the latest value or every occurrence |
 | 6 | Direct and Guaranteed Delivery | Live telemetry versus durable business events during consumer outages |
-| 7 | Topics, Subscriptions & Durable Queues | Topic subscriptions and durable endpoints |
-| 8 | Competing Consumers | Independent vibration-analysis windows distributed across consumers |
-| 9 | Retained State | Current state versus historical events |
-| 10 | MQTT QoS & Business Success | Transport acknowledgement versus committed business processing |
-| 11 | Reliability: Retry, TTL & DMQ | Retries, expiration, and failed-message isolation |
-| 12 | REST Messaging | HTTP publishing and queue-backed HTTP delivery |
-| 13 | Event Reuse & Mixed Delivery | Independent consumers with different delivery contracts |
-| 14 | Event Mesh | Multi-broker, cross-site store-and-forward |
-| 15 | The Manufacturing Ecosystem | All patterns together across factory, HQ, and AWS |
+| 7 | Topics and Subscriptions | Topic metadata, exact matches, and wildcard subscriptions across consumers |
+| 8 | Durable Queues | One application’s queue stores matching events until acknowledgement |
+| 9 | Competing Consumers | Independent vibration-analysis windows distributed across consumers |
+| 10 | Retained State | Current state versus historical events |
+| 11 | MQTT QoS & Business Success | Transport acknowledgement versus committed business processing |
+| 12 | Reliability: Retry, TTL & DMQ | Retries, expiration, and failed-message isolation |
+| 13 | REST Messaging | HTTP publishing and queue-backed HTTP delivery |
+| 14 | Event Reuse & Mixed Delivery | Independent consumers with different delivery contracts |
+| 15 | Event Mesh | Multi-broker, cross-site store-and-forward |
+| 16 | The Manufacturing Ecosystem | All patterns together across factory, HQ, and AWS |
 
 Each lesson follows the same shape: a **scenario**, an animated **stage**, a
 **controls** panel, a **"Key takeaways"** summary, and a closing **knowledge check**.

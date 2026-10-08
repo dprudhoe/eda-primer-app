@@ -10,6 +10,7 @@ import Lesson01 from "./Lesson01FireAndForget";
 import Lesson02 from "./Lesson02RetainedState";
 import Lesson03 from "./Lesson03QoS";
 import Lesson04 from "./Lesson04Queues";
+import LessonTopics from "./LessonTopics";
 import Lesson05 from "./Lesson05CompetingConsumers";
 import Lesson06 from "./Lesson06Reliability";
 import Lesson07 from "./Lesson07Rest";
@@ -70,10 +71,17 @@ const lessons: Omit<Lesson, "index">[] = [
     Component: Lesson01,
   },
   {
+    id: "topics-subscriptions",
+    title: "Topics and Subscriptions",
+    short: "Message metadata and matching interest",
+    goal: "Explore topic metadata and exact or wildcard subscriptions across independent consumers.",
+    Component: LessonTopics,
+  },
+  {
     id: "queues",
-    title: "Topics, Subscriptions & Durable Queues",
-    short: "How queues attract events",
-    goal: "Understand that publishers publish to topics, while queues attract messages through subscriptions.",
+    title: "Durable Queues",
+    short: "Store, deliver, acknowledge",
+    goal: "Watch one consumer application’s queue retain matching events through outages and remove them after acknowledgement.",
     Component: Lesson04,
   },
   {
