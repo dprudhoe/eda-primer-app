@@ -9,7 +9,7 @@ export function topicMatches(sub: string, topic: string): boolean {
   for (let i = 0; i < s.length; i++) {
     if (s[i] === ">") {
       // matches one or more remaining levels
-      return t.length > i;
+      return i === s.length - 1 && t.length > i;
     }
     if (i >= t.length) return false;
     if (s[i] === "*") continue; // matches exactly one level

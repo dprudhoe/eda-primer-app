@@ -21,7 +21,7 @@ export default function Intro({
         <p>
           A hands-on primer about event-driven architecture for engineers in manufacturing and
           industrial systems. No broker to install, no code to write — just interactive lessons
-          that show <em>why</em> different messaging patterns exist and where each one fits.
+          that start with events and brokers, then show <em>why</em> different messaging patterns exist and where each one fits.
         </p>
       </div>
 
@@ -36,9 +36,9 @@ export default function Intro({
       <div className="intro-why">
         <div className="why-card">
           <div className="why-icon">📡</div>
-          <h4>Beyond "just use MQTT"</h4>
+          <h4>Start with the bigger picture</h4>
           <p>
-            Publish/subscribe is a great start — but live telemetry, critical business transactions
+            Explore how factory applications share events through a broker. Then discover why live telemetry, critical business transactions
             where data loss is not an option, and cross-site distribution each need different
             delivery behavior. Knowing when to use each pattern is the skill.
           </p>

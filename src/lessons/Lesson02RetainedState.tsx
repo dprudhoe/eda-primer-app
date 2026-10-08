@@ -278,8 +278,10 @@ export default function Lesson02RetainedState() {
             </p>
             <p>
               With <strong>Report by Exception</strong>, repeated samples of the same value are not
-              republished. Retain still gives a late subscriber the last known change, combining
-              bandwidth efficiency with immediate state recovery.
+              republished. <strong>Retain is an MQTT feature</strong>: publishing with the retain
+              flag lets the broker keep the latest retained message for each topic and deliver it
+              to new matching subscribers. This gives a late subscriber the last known change,
+              combining bandwidth efficiency with immediate state recovery.
             </p>
             <p>
               The <strong>Historian</strong> is continuously connected and records every published
@@ -292,7 +294,7 @@ export default function Lesson02RetainedState() {
         <InsightCard
           items={[
             "Report by Exception suppresses unchanged samples before they use network bandwidth.",
-            "MQTT retain gives late subscribers the last state that was actually published.",
+            "Retain is an MQTT feature: the broker keeps the latest retained message per topic for new matching subscribers.",
             <>Retained messages answer <b>“What is true now?”</b></>,
             <>They do <b>not</b> answer <b>“What happened?”</b></>,
             "State and events serve different purposes.",

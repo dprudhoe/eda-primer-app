@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import logoUrl from "../assets/solace-logo.svg";
 
@@ -375,15 +375,41 @@ export function Particle({
   children: ReactNode;
   zIndex?: number;
 }) {
+  const completed = useRef(false);
   return (
     <motion.div
       className="particle"
       style={{ zIndex }}
-      initial={{ left: `${from.x}%`, top: `${from.y}%`, opacity: 0, scale: 0.6, x: "-50%", y: "-50%" }}
-      animate={{ left: `${to.x}%`, top: `${to.y}%`, opacity: [0, 1, 1, 1], scale: 1 }}
+      initial={{
+        left: `${from.x}%`,
+        top: `${from.y}%`,
+        opacity: 0,
+        scale: 0.6,
+        x: "-50%",
+        y: "-50%",
+      }}
+      animate={{
+        left: `${to.x}%`,
+        top: `${to.y}%`,
+        opacity: [0, 1, 1, 1],
+        scale: 1,
+      }}
       exit={{ opacity: 0, scale: 0.6 }}
       transition={{ duration, ease: "easeInOut" }}
-      onAnimationComplete={onDone}
+      onAnimationComplete={(definition) => {
+        // Exit animations also complete. Only arrival may deliver a message,
+        // and a repeated completion notification must not deliver it again.
+        if (
+          definition === "exit" ||
+          (typeof definition === "object" &&
+            !Array.isArray(definition) &&
+            definition.opacity === 0)
+        )
+          return;
+        if (completed.current) return;
+        completed.current = true;
+        onDone?.();
+      }}
     >
       {children}
     </motion.div>

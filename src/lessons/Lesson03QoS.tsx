@@ -107,7 +107,7 @@ export default function Lesson03QoS() {
               const ok = dbUpRef.current;
               setStep(4, ok ? "ok" : "fail");
               setStep(5, ok ? "ok" : "fail");
-              setMqttStatus(ok ? "Processed" : "Processing failed · message gone");
+              setMqttStatus(ok ? "Delivered" : "Processing failed · message gone");
               setDbBusy(false);
               mm.active = false;
             }

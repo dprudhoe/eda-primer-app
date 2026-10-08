@@ -53,7 +53,7 @@ function workerPt(i: number, n: number): Pt {
 export default function Lesson05CompetingConsumers() {
   const { flyers, emit, remove } = useFlow();
   const [queue, setQueue] = useState<AnalysisMsg[]>([]);
-  const [workers, setWorkers] = useState<Worker[]>(() => [makeWorker("Analyzer A", 1200)]);
+  const [workers, setWorkers] = useState<Worker[]>(() => [makeWorker("Analyzer A", 1200), makeWorker("Analyzer B", 1300)]);
 
   const queueRef = useRef(queue);
   const workersRef = useRef(workers);
@@ -219,7 +219,7 @@ export default function Lesson05CompetingConsumers() {
 
           <Card title="Try this">
             <div className="prose" style={{ fontSize: 13 }}>
-              <p><b style={{ color: "var(--green-bright)" }}>Start with one analyzer</b>, publish 20, and watch the queue absorb work faster than one consumer can process it.</p>
+              <p><b style={{ color: "var(--green-bright)" }}>Start with two active analyzers</b>, publish 20, and watch them share the work. Remove one to compare how quickly the queue drains.</p>
               <p><b style={{ color: "var(--green-bright)" }}>Add additional analyzers</b> while a backlog remains. New work is distributed across the expanded pool and the queue drains faster.</p>
               <p><b style={{ color: "var(--green-bright)" }}>Set different processing times</b>, then publish another burst. The fastest available analyzer naturally completes more windows.</p>
               <p><b style={{ color: "var(--green-bright)" }}>Pause the fastest analyzer</b>. The remaining consumers continue taking work without any publisher change.</p>
