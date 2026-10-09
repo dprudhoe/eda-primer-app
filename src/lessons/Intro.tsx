@@ -19,44 +19,45 @@ export default function Intro({
           <span className="accent">explored interactively.</span>
         </h1>
         <p>
-          A hands-on primer about event-driven architecture for engineers in manufacturing and
-          industrial systems. No broker to install, no code to write — just interactive lessons
-          that start with events and brokers, then show <em>why</em> different messaging patterns exist and where each one fits.
+          How do machines, production systems, and business applications share what is happening
+          across a factory? Explore event-driven architecture one idea at a time, with interactive
+          manufacturing examples. Start with the basics, then build toward reliable connected
+          operations. No messaging experience, broker installation, or coding required.
         </p>
       </div>
 
       <div className="intro-big">
         <div className="quote">
-          Not all messages are equal.
+          Something happens in the factory.
           <br />
-          Different operational and business outcomes require <em>different messaging behaviors.</em>
+          How do the systems that care <em>find out and respond?</em>
         </div>
       </div>
 
       <div className="intro-why">
         <div className="why-card">
           <div className="why-icon">📡</div>
-          <h4>Start with the bigger picture</h4>
+          <h4>See why systems need to connect</h4>
           <p>
-            Explore how factory applications share events through a broker. Then discover why live telemetry, critical business transactions
-            where data loss is not an option, and cross-site distribution each need different
-            delivery behavior. Knowing when to use each pattern is the skill.
+            Start with familiar factory applications. Watch how they interact through individual
+            integrations, then explore how a shared broker helps them exchange events.
           </p>
         </div>
         <div className="why-card">
           <div className="why-icon">🏭</div>
-          <h4>Grounded in the plant floor</h4>
+          <h4>Learn what an event means</h4>
           <p>
-            Every lesson uses a real industrial scenario: PLC telemetry, machine state, MES work
-            orders, quality events, and connected operations — not abstract "foo/bar" topics.
+            A temperature is measured, a machine reports a fault, or material is consumed.
+            Discover how these everyday occurrences become events that interested systems can
+            subscribe to and act on.
           </p>
         </div>
         <div className="why-card">
           <div className="why-icon">🔗</div>
-          <h4>From pattern to platform</h4>
+          <h4>Build understanding by trying things</h4>
           <p>
-            Each pattern maps naturally onto what a Solace event broker and event mesh provide, so
-            you see how the concepts scale from one line to a global mesh.
+            Publish an event, change a subscription, or take a consumer offline. As each idea
+            becomes familiar, explore how delivery, queues, and recovery help systems keep working.
           </p>
         </div>
       </div>
