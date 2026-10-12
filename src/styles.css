@@ -2386,6 +2386,14 @@ select.select-input {
 .app[data-theme="dark"] button.btn.primary {
   background: var(--green);
 }
+.app[data-theme="dark"] button.btn.status-btn.online {
+  color: var(--text);
+  background: rgba(0, 200, 149, 0.18);
+  border-color: var(--green-bright);
+}
+.app[data-theme="dark"] button.btn.status-btn.online:hover:not(:disabled) {
+  background: rgba(0, 200, 149, 0.28);
+}
 .app[data-theme="dark"] .predict {
   border-color: var(--line);
   background: rgba(0, 70, 104, 0.82);

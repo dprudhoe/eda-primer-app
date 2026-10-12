@@ -502,7 +502,7 @@ export function LessonWhatIsBroker() {
           <Node
             name="Maintenance"
             role="Alarms"
-            sub="machine/fault"
+            sub="Machine faults"
             value={received[0]}
             accent="amber"
             style={{ width: 155 }}
@@ -512,7 +512,7 @@ export function LessonWhatIsBroker() {
           <Node
             name="Dashboard"
             role="Alarms and telemetry"
-            sub="Temperature + faults"
+            sub="Temperature readings and faults"
             value={received[1]}
             accent="violet"
             style={{ width: 155 }}
