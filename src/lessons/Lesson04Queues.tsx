@@ -188,7 +188,7 @@ export default function Lesson04Queues() {
         </Stage>
         <ControlBar>
           <ControlGroup label="Example topics — click to publish">
-            <div className="example-grid">
+            <div className="queue-publish-topics">
               {topics.map((t) => (
                 <Btn key={t}  onClick={() => publish(t)}>
                   {t}
