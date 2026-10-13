@@ -61,7 +61,13 @@ const architectureScenarios = [
       "Warehouse announces that materials are ready. MES can release the next production operation.",
   },
 ];
-function Lines({ paths, dimmed = false }: { paths: [Pt, Pt][]; dimmed?: boolean }) {
+function Lines({
+  paths,
+  dimmed = false,
+}: {
+  paths: [Pt, Pt][];
+  dimmed?: boolean;
+}) {
   return (
     <svg className="flow-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
       {paths.map(([a, b], i) => (
@@ -203,7 +209,11 @@ export function LessonWhyEDA() {
                     strokeDashoffset: [0, -32, 0],
                     opacity: [0.2, 0.8, 0.8, 0.2],
                   }}
-                  transition={{ duration: 0.7, delay: index * 0.75, ease: "linear" }}
+                  transition={{
+                    duration: 0.7,
+                    delay: index * 0.75,
+                    ease: "linear",
+                  }}
                 >
                   <title>
                     {apps[i].name} requests data from{" "}
@@ -297,10 +307,7 @@ export function LessonWhyEDA() {
           />
         </div>
         <div className="control-row">
-          <StatPill
-            label="Integration points"
-            value={paths.length}
-          />
+          <StatPill label="Integration points" value={paths.length} />
         </div>
       </ControlBar>
     </Layout>
@@ -443,7 +450,10 @@ export function LessonWhatIsBroker() {
   const topic = `plant/line1/machine/${kind}`;
   const publish = (type: "temperature" | "fault") => {
     setKind(type);
-    emit({ tone: "green", from: source, to: HUB,
+    emit({
+      tone: "green",
+      from: source,
+      to: HUB,
       label: type === "fault" ? "Fault detected" : "72.4°C",
       meta: { route: true, matches: type === "fault" ? [0, 1] : [1] },
     });
@@ -458,9 +468,9 @@ export function LessonWhatIsBroker() {
             subscribes only to faults. Dashboard subscribes to both event types.
           </p>
           <p>
-            Publish a temperature reading or a fault. The broker checks
-            interest and routes copies; the producer does not choose the
-            receiving applications.
+            Publish a temperature reading or a fault. The broker checks interest
+            and routes copies; the producer does not choose the receiving
+            applications.
           </p>
         </>
       }
@@ -551,8 +561,12 @@ export function LessonWhatIsBroker() {
       </Stage>
       <ControlBar>
         <div className="control-row">
-          <Btn variant="primary" onClick={() => publish("temperature")}>Publish temperature</Btn>
-          <Btn variant="primary" onClick={() => publish("fault")}>Publish fault</Btn>
+          <Btn variant="primary" onClick={() => publish("temperature")}>
+            Publish temperature
+          </Btn>
+          <Btn variant="primary" onClick={() => publish("fault")}>
+            Publish fault
+          </Btn>
         </div>
       </ControlBar>
     </Layout>
@@ -561,175 +575,144 @@ export function LessonWhatIsBroker() {
 const connections = [
   {
     id: "MQTT",
-    kind: "Publish/subscribe protocol",
-    app: "PLC gateway",
-    text: "A lightweight publish/subscribe protocol commonly used for device and edge telemetry. Clients publish to topics and subscribe to topics or filters.",
-    detail:
-      "QoS defines transport delivery behavior. It does not establish whether a business transaction was committed.",
+    kind: "Lightweight publish/subscribe protocol",
+    fit: "Device gateways, telemetry, and current state",
+    strengths: "Topic subscriptions, QoS levels, and retained messages",
+    note: "QoS describes transport delivery; processing success is a separate concern.",
   },
   {
-    id: "AMQP",
-    kind: "Messaging protocol (AMQP 1.0)",
-    app: "Warehouse service",
-    text: "A standard wire protocol for messaging between applications and brokers, with links, settlement, and flow control.",
-    detail:
-      "Useful for business services needing interoperable messaging. Broker configuration and client behavior still determine delivery outcomes.",
+    id: "AMQP 1.0",
+    kind: "Standard messaging protocol",
+    fit: "Business services and interoperable integrations",
+    strengths: "Messaging links, flow control, and delivery settlement",
+    note: "Available behavior depends on the client, broker, and configuration.",
   },
   {
     id: "JMS",
     kind: "Java messaging API",
-    app: "Java MES",
-    text: "An API used by Java applications to send and receive messages through a messaging provider. JMS is not a wire protocol.",
-    detail:
-      "Solace’s JMS provider can use SMF underneath. A familiar Java API can connect an existing enterprise application to the same broker.",
+    fit: "Existing Java MES and enterprise applications",
+    strengths:
+      "Familiar Java APIs for publish/subscribe and queue-based messaging",
+    note: "An API rather than a wire protocol. Solace provides the messaging implementation.",
   },
   {
     id: "REST",
     kind: "HTTP-based messaging integration",
-    app: "HTTP quality service",
-    text: "Applications can publish messages using HTTP requests. A Solace REST delivery point can deliver queued messages to an HTTP endpoint.",
-    detail:
-      "This makes HTTP services participants in messaging. HTTP is request/response; durable queue-backed delivery adds asynchronous behavior and retry handling.",
+    fit: "Applications that publish or receive through HTTP",
+    strengths: "HTTP publishing and queue-backed delivery to HTTP endpoints",
+    note: "Receiving uses a configured REST delivery point; the HTTP application does not need a messaging client library.",
   },
   {
     id: "SMF",
-    kind: "Solace Message Format protocol",
-    app: "High-volume analytics",
-    text: "Solace’s native messaging protocol, used by Solace messaging APIs to access Direct and Guaranteed delivery and advanced broker capabilities.",
-    detail:
-      "Partitioned queues distribute related events by key while preserving order within each partition. Message eliding keeps the latest eligible Direct update per topic. Guaranteed flows use windows and acknowledgements to manage messages in flight.",
+    kind: "Solace’s native messaging protocol",
+    fit: "Applications needing advanced Solace messaging capabilities",
+    strengths:
+      "Direct and Guaranteed delivery through Solace APIs; advanced flow control",
+    note: "Supports access to capabilities such as partitioned queues and eligible Direct-message eliding, depending on the API and configuration.",
   },
 ];
 export function LessonConnections() {
-  const [selected, setSelected] = useState(0);
-  const [sent, setSent] = useState(false);
-  const { flyers, emit, remove, clear } = useFlow();
-  const c = connections[selected];
   return (
-    <Layout
-      scenario={
-        <>
-          <p>
-            The factory has device gateways, Java MES applications, warehouse
-            services, and HTTP endpoints. They can share events through one
-            broker using supported interfaces.
-          </p>
-          <p>
-            Select an interface to see where it fits. These are connection
-            choices, not interchangeable guarantees about storage or successful
-            processing.
-          </p>
-        </>
-      }
-      takeaways={[
-        "MQTT, AMQP 1.0, and SMF are messaging protocols; JMS is an API; REST messaging uses HTTP integration.",
-        "A multi-protocol broker can route an event between supported interfaces without requiring every application to use the same one.",
-        "Agree on payload schemas, topics, and supported metadata across interfaces.",
-        "Choose delivery behavior separately from the application’s connection interface.",
-      ]}
-      question="A Java MES uses JMS and a gateway uses MQTT. Must both applications use the same API?"
-      wrong="Yes, all subscribers must use the producer’s API."
-      answer="No, a broker supporting both can route compatible events between them."
-      reveal="The broker bridges supported interfaces. Applications still need compatible event contracts, and some features or metadata vary by protocol."
-    >
-      <Stage
-        minHeight={470}
-        note="Conceptual interface overview. Protocol support and feature availability depend on the broker, client API, and configuration."
+    <div className="interface-reference">
+      <Layout
+        scenario={
+          <>
+            <p>
+              <strong>
+                Solace supports multiple interfaces, so applications can connect
+                in a way that suits them.
+              </strong>
+            </p>
+            <p>
+              A device gateway, Java MES, and HTTP service can participate in
+              the same messaging system. Use this comparison to understand each
+              interface’s strengths and common manufacturing uses.
+            </p>
+          </>
+        }
+        takeaways={[
+          "Applications can share events through a multi-protocol broker while using different supported interfaces.",
+          "MQTT, AMQP 1.0, and SMF are protocols. JMS is an API; REST messaging uses HTTP integration.",
+          "Connection choice and delivery requirements are separate decisions. Choose storage, acknowledgements, and processing behavior for the outcome you need.",
+        ]}
+        question="Does choosing a messaging interface alone guarantee successful business processing?"
+        wrong="Yes, a messaging protocol guarantees the business outcome."
+        answer="No, delivery and processing behavior must also be designed."
+        reveal="The interface connects the application. Storage, acknowledgement, recovery, and application processing determine whether the intended business outcome is achieved."
       >
-        <div className="foundation-connection">
-          <div className="foundation-kicker">{c.kind}</div>
-          <h2>{c.id}</h2>
-          <p>{c.text}</p>
-          <div className="foundation-connect-row">
-            <Node name={c.app} role={`Connected using ${c.id}`} accent="cyan" />
-            <span aria-hidden="true">→</span>
-            <Broker active={flyers.length > 0} />
-            <span aria-hidden="true">→</span>
-            <Node
-              name="Interested systems"
-              role="Their supported interfaces"
-              sub={sent ? "Event received" : "Waiting for an event"}
-              lit={sent}
-            />
-          </div>
-          <p className="foundation-detail">{c.detail}</p>
-        </div>
-        <AnimatePresence>
-          {flyers.map((f) => (
-            <Particle
-              key={f.id}
-              from={f.from}
-              to={f.to}
-              duration={0.7}
-              onDone={() => {
-                remove(f.id);
-                setSent(true);
-              }}
-            >
-              <MsgToken label={f.label} />
-            </Particle>
-          ))}
-        </AnimatePresence>
-      </Stage>
-      <ControlBar>
-        <div className="control-row">
-          {connections.map((item, i) => (
-            <Btn
-              key={item.id}
-              variant={i === selected ? "primary" : "default"}
-              onClick={() => {
-                clear();
-                setSelected(i);
-                setSent(false);
-              }}
-            >
-              {item.id}
-            </Btn>
-          ))}
-          <Btn
-            onClick={() => {
-              setSent(false);
-              emit({
-                tone: "green",
-                from: { x: 20, y: 51 },
-                to: { x: 80, y: 51 },
-                label: "Inspection completed",
-              });
-            }}
+        <Card
+          title="Supported interfaces at a glance"
+          className="protocol-matrix-card"
+        >
+          <div
+            className="protocol-table-scroll"
+            role="region"
+            aria-label="Messaging interface comparison"
+            tabIndex={0}
           >
-            Send an example event
-          </Btn>
-        </div>
-      </ControlBar>
-      <Card title="Explore further">
-        <div className="prose">
-          <p>
-            <a
-              href="https://docs.solace.com/API/Component-Maps.htm"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Solace interfaces and APIs
-            </a>{" "}
-            ·{" "}
-            <a
-              href="https://docs.solace.com/Messaging/Guaranteed-Msg/Partitioned-Queue-Messaging.htm"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Partitioned queues
-            </a>{" "}
-            ·{" "}
-            <a
-              href="https://docs.solace.com/Messaging/Direct-Msg/Direct-Messages.htm"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Direct delivery and message eliding
-            </a>
+            <table className="protocol-table">
+              <caption>
+                Connection choices for manufacturing applications
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Interface</th>
+                  <th scope="col">What it is</th>
+                  <th scope="col">Where it fits</th>
+                  <th scope="col">Strengths and features</th>
+                </tr>
+              </thead>
+              <tbody>
+                {connections.map((c) => (
+                  <tr key={c.id}>
+                    <th scope="row">{c.id}</th>
+                    <td>{c.kind}</td>
+                    <td>{c.fit}</td>
+                    <td>
+                      <strong>{c.strengths}</strong>
+                      <p>{c.note}</p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="protocol-table-note">
+            These are common fits, not restrictions. Feature availability and
+            metadata handling depend on the broker version, client API, and
+            configuration.
           </p>
-        </div>
-      </Card>
-    </Layout>
+        </Card>
+        <Card title="Explore further">
+          <div className="prose">
+            <p>
+              <a
+                href="https://docs.solace.com/API/Component-Maps.htm"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Solace interfaces and APIs
+              </a>{" "}
+              ·{" "}
+              <a
+                href="https://docs.solace.com/Messaging/Guaranteed-Msg/Partitioned-Queue-Messaging.htm"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Partitioned queues
+              </a>{" "}
+              ·{" "}
+              <a
+                href="https://docs.solace.com/Messaging/Direct-Msg/Direct-Messages.htm"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Direct delivery and message eliding
+              </a>
+            </p>
+          </div>
+        </Card>
+      </Layout>
+    </div>
   );
 }
